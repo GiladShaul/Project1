@@ -87,6 +87,7 @@ def run_experiment(
     scenarios: Iterable[CostScenario] = (BASELINE, STRESS),
     source: str = "unspecified",
     exploratory: bool = True,
+    context_coverage: float = 1.0,
 ) -> dict:
     """Run the registered experiment over every eligible session in the range."""
     from .report import split_sessions, summarize, bootstrap_lower_bound, evaluate_gates
@@ -114,8 +115,18 @@ def run_experiment(
             {"contract": c, "from": a.isoformat(), "to": b.isoformat()} for c, a, b in windows
         ],
         "spans_contract_roll": spans_roll,
+        "context_coverage_floor": context_coverage,
         "scenarios": {},
     }
+    if context_coverage < 1.0:
+        out["declared_departure"] = (
+            f"Pre-snapshot context windows (L1 touch, L2 Asia/London, L4 overnight "
+            f"range) accepted at >= {context_coverage:.1%} minute coverage instead of "
+            "100%. Sec 2 names the intervals that must be minute-complete - the LB "
+            "historical intervals, the execution window, and snapshot-forward - and "
+            "these are not among them; they remain strict. Sec 1: this is a recorded "
+            "change to an operative reading, not a silent one."
+        )
     if spans_roll:
         out["contract_warning"] = (
             f"Range crosses {len(windows) - 1} Sec 2 research switch(es): "
@@ -135,7 +146,7 @@ def run_experiment(
 
     for cost in scenarios:
         try:
-            results = run_study(store, sessions, cost)
+            results = run_study(store, sessions, cost, context_coverage=context_coverage)
         except RunInvalid as e:
             out["scenarios"][cost.name] = {"run_invalid": str(e)}
             continue
@@ -156,6 +167,7 @@ def run_experiment(
             for L in (5, 10)
         }
         out["scenarios"][cost.name] = {
+            "context_coverage_floor": context_coverage,
             "planned_loss": cost.planned_loss,
             "min_target_points": cost.min_target_points(),
             "scored_sessions": len(scored),

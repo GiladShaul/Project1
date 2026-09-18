@@ -35,6 +35,12 @@ def main(argv: list[str] | None = None) -> int:
                     help="the CSV is a dated unadjusted contract, not a continuous series")
     ap.add_argument("--out", default="reports")
     ap.add_argument("--scenario", choices=["baseline", "stress", "both"], default="both")
+    ap.add_argument("--context-coverage", type=float, default=1.0,
+                    help="minimum minute coverage for the PRE-SNAPSHOT context windows "
+                         "(L1 touch, L2 Asia/London, L4 overnight range). Default 1.0 = "
+                         "the strictest reading. Sec 2 does not list these among the "
+                         "intervals it requires minute-complete; a lower floor is "
+                         "recorded in the report as a declared departure (Sec 1).")
     a = ap.parse_args(argv)
 
     store = load_csv(a.csv, tz=a.tz)
@@ -46,6 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     report = run_experiment(
         store, a.start, a.end, scenarios=scenarios,
         source=a.source, exploratory=not a.dated,
+        context_coverage=a.context_coverage,
     )
     path = write_report(report, a.out)
 
@@ -53,6 +60,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"eligible sessions: {report['eligible_sessions']}")
     print("contract windows: " + ", ".join(
         f"{w['contract']} ({w['from']}..{w['to']})" for w in report["contract_windows"]))
+    if report.get("declared_departure"):
+        print(f"\n!! DECLARED DEPARTURE: {report['declared_departure']}\n")
     if report.get("contract_warning"):
         print(f"\n!! {report['contract_warning']}\n")
     for name, sc in report["scenarios"].items():

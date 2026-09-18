@@ -135,6 +135,7 @@ def select_setup(
     window: int,
     cost: CostScenario,
     log: list[dict],
+    context_coverage: float = 1.0,
 ) -> Optional[Setup]:
     """Rank LB candidates and apply the L3 gate order.
 
@@ -170,7 +171,12 @@ def select_setup(
     # [prev 18:00, 09:29) complete and by the Sec 2 execution inventory covering
     # [09:29, 12:00]; it is asserted here anyway so the invariant is local to the
     # code that depends on it rather than emergent from two unrelated checks.
-    store.require_complete(swing_start, snapshot, "L5/L6 swing history")
+    # Honours the same declared pre-snapshot coverage floor as the L1/L2/L4
+    # context; see context._require_bars for why Sec 2 permits one.
+    cov = store.coverage(swing_start, snapshot)
+    if cov.present < cov.expected * context_coverage:
+        raise MissingData(
+            f"L5/L6 swing history: {cov.present}/{cov.expected} minutes")
     swings = unconsumed_swings(store, swing_start, snapshot, snapshot)
 
     for cand in candidates:
@@ -259,6 +265,7 @@ def run_window(
     cost: CostScenario,
     equity: float,
     log: list[dict],
+    context_coverage: float = 1.0,
 ) -> tuple[Optional[Setup], Optional[datetime], Optional[str]]:
     """Attempt one window.  Returns (setup, submission_time, expiry_reason).
 
@@ -267,7 +274,7 @@ def run_window(
     """
     snapshot, _, w_start, w_end = _window_bounds(session_date, window)
 
-    setup = select_setup(store, ctx, session_date, window, cost, log)
+    setup = select_setup(store, ctx, session_date, window, cost, log, context_coverage)
     if setup is None:
         return None, None, f"window{window}: no qualifying LB candidate"
 
@@ -394,6 +401,7 @@ def run_session(
     session_date: date,
     cost: CostScenario,
     equity: Optional[float] = None,
+    context_coverage: float = 1.0,
 ) -> SessionResult:
     """Run one eligible session end to end (Sec 5 L7)."""
     equity = cost.starting_equity if equity is None else equity
@@ -418,7 +426,7 @@ def run_session(
 
     # Sec 5 L7: "A failed daily bias/London/data/risk precheck ends the day."
     try:
-        ctx = build_daily_context(store, session_date, cost)
+        ctx = build_daily_context(store, session_date, cost, context_coverage)
     except NoTrade as e:
         res.no_trade_reason = str(e)
         return res
@@ -432,7 +440,8 @@ def run_session(
     for window in (1, 2):
         try:
             setup, submitted, reason = run_window(
-                store, ctx, session_date, window, cost, equity, res.candidates_logged
+                store, ctx, session_date, window, cost, equity, res.candidates_logged,
+                context_coverage,
             )
         except MissingData as e:
             reasons.append(f"window{window}: {e}")
@@ -467,12 +476,13 @@ def run_study(
     dates: list[date],
     cost: CostScenario,
     carry_equity: bool = True,
+    context_coverage: float = 1.0,
 ) -> list[SessionResult]:
     """Run consecutive sessions with carried closed equity (Sec 3)."""
     equity = cost.starting_equity
     out: list[SessionResult] = []
     for d in dates:
-        res = run_session(store, d, cost, equity)
+        res = run_session(store, d, cost, equity, context_coverage)
         if carry_equity:
             equity += res.net_pnl
         out.append(res)

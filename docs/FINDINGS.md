@@ -66,6 +66,46 @@ The screen therefore produced **zero scored sessions and zero trades**. Every §
 gate reports INCONCLUSIVE, which is the correct reading of *"A lack of adequate
 history is inconclusive, not a pass."*
 
+### A defect in this implementation, not in the rulebook
+
+The 19-of-19 exclusion above was partly **my own over-enforcement**. §2 is
+deliberate about which intervals must be minute-complete: *"the elapsed prefix of
+the current operative quarter, the entire completed reference quarter, and each
+selected LB historical interval"*, plus *"complete MNQ execution records from
+09:29 through the 12:00 flatten execution"* and, for LB, *"continuous complete
+records from each snapshot through its decisions"*.
+
+The **pre-snapshot** context windows — L1's touch test, L2's Asia and London,
+L4's overnight range — are on none of those lists. They are mandatory context, so
+their absence vetoes the setup, but §2 nowhere equates "one absent minute" with
+"missing context". The first implementation applied the strictest reading to them
+anyway, and that alone vetoed every session on a feed with a routine vendor gap.
+
+The engine now takes an explicit `context_coverage` floor, still defaulting to
+1.0 so nothing loosens silently, with any lower floor recorded in the report as a
+declared departure under §1. The intervals §2 does name remain strict at all
+settings.
+
+### Running it with that floor declared
+
+Re-run over the M2026 contract window alone (2026-08-21 → 2026-09-12, no roll
+spanned) at a 0.98 floor: **15 eligible sessions, 11 scored, 4 excluded, and zero
+trades.**
+
+| Why no trade | Sessions | Cause |
+|---|---:|---|
+| No eligible historical daily candle at all (0 of 13) | 4 | data ceiling |
+| B_low or B_high absent — too few candles to bracket P0 | 6 | data ceiling |
+| **Both brackets touched → §L1 no trade** | **1** | **the rule** |
+
+Ten of eleven are data starvation. **No LB candidate was ever constructed**, so
+L3/L4/L5/L6 were never exercised on real data at all. The one genuine rule
+decision was the L1 double-touch, consistent with §3 below.
+
+This is the closest thing to a real backtest the available data permits, and it
+establishes nothing about LB-OPEN's edge — only that the engine runs end to end
+on real input and that the data ceiling, not the strategy, is what stops it.
+
 ---
 
 ## 3. The gate stack is far more selective than §7's evidence floor allows

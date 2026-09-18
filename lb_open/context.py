@@ -117,12 +117,31 @@ def _available_bars(
 
 
 def _require_bars(
-    store: MinuteStore, start: datetime, end: datetime, as_of: datetime, what: str
+    store: MinuteStore, start: datetime, end: datetime, as_of: datetime, what: str,
+    coverage: float = 1.0,
 ) -> tuple[Bar, ...]:
-    """Sec 2: "missing mandatory context vetoes the setup"."""
+    """Sec 2: "missing mandatory context vetoes the setup".
+
+    `coverage` is the declared minimum fraction of the window's minutes that must
+    be present, and it exists because Sec 2 is deliberate about WHICH intervals
+    must be minute-complete.  It names three: "the elapsed prefix of the current
+    operative quarter, the entire completed reference quarter, and each selected
+    LB historical interval", and separately requires "complete MNQ execution
+    records from 09:29 through the 12:00 flatten execution" and, for LB,
+    "continuous complete records from each snapshot through its decisions".
+
+    The PRE-SNAPSHOT context windows - L1's touch test, L2's Asia and London, and
+    L4's overnight range - are on none of those lists.  They are mandatory
+    context, so their absence vetoes the setup, but Sec 2 does not equate "a
+    single absent minute" with "missing context".  Defaulting to 1.0 keeps the
+    strictest reading, so nothing loosens silently; a caller that declares a
+    lower floor has its choice recorded in the audit record, per Sec 1: "Change
+    any operative rule only by creating a new version and recording the change
+    before testing new unseen data."
+    """
     expected = _expected_minutes(start, end)
     bars = store.available(start, end, as_of) if expected > 0 else ()
-    if expected <= 0 or len(bars) != expected:
+    if expected <= 0 or len(bars) < expected * coverage:
         raise MissingData(
             f"{what}: {len(bars)}/{expected} minutes in "
             f"[{to_ny(start):%Y-%m-%d %H:%M}, {to_ny(end):%Y-%m-%d %H:%M}) NY "
@@ -132,9 +151,10 @@ def _require_bars(
 
 
 def _require_ohlc(
-    store: MinuteStore, start: datetime, end: datetime, as_of: datetime, what: str
+    store: MinuteStore, start: datetime, end: datetime, as_of: datetime, what: str,
+    coverage: float = 1.0,
 ) -> OHLC:
-    return aggregate(_require_bars(store, start, end, as_of, what))
+    return aggregate(_require_bars(store, start, end, as_of, what, coverage))
 
 
 def _asia_start(session_date: date) -> datetime:
@@ -255,6 +275,7 @@ def bracket_touches(
     b_low: float,
     b_high: float,
     as_of: Optional[datetime] = None,
+    coverage: float = 1.0,
 ) -> tuple[bool, bool]:
     """Sec 5 L1: observe [00:00,09:29) today; did each level get touched?
 
@@ -275,7 +296,7 @@ def bracket_touches(
     # remains only the Sec 2 availability cutoff, so a call before 09:29 cannot
     # complete the window and raises rather than returning a partial verdict.
     end = snapshot_at(session_date, SNAPSHOT_1)
-    bars = _require_bars(store, start, end, as_of, "L1 touch window [00:00,09:29)")
+    bars = _require_bars(store, start, end, as_of, "L1 touch window [00:00,09:29)", coverage)
     touched_low = any(b.covers(b_low) for b in bars)
     touched_high = any(b.covers(b_high) for b in bars)
     return touched_low, touched_high
@@ -287,7 +308,8 @@ def bracket_touches(
 
 
 def classify_london(
-    store: MinuteStore, session_date: date, as_of: Optional[datetime] = None
+    store: MinuteStore, session_date: date, as_of: Optional[datetime] = None,
+    coverage: float = 1.0,
 ) -> Optional[str]:
     """Sec 5 L2: classify London against Asia; None means "neither or both".
 
@@ -301,9 +323,9 @@ def classify_london(
         as_of = snapshot_at(session_date, SNAPSHOT_1)
     midnight = ny_datetime(session_date, LONDON_START)
     asia = _require_ohlc(store, _asia_start(session_date), midnight, as_of,
-                         "L2 Asia [18:00,00:00)")
+                         "L2 Asia [18:00,00:00)", coverage)
     london = _require_ohlc(store, midnight, ny_datetime(session_date, LONDON_END),
-                           as_of, "L2 London [00:00,06:00)")
+                           as_of, "L2 London [00:00,06:00)", coverage)
 
     ah, al = asia.high, asia.low
     lh, ll, lc = london.high, london.low, london.close
@@ -326,7 +348,8 @@ def classify_london(
 
 
 def overnight_range(
-    store: MinuteStore, session_date: date, as_of: Optional[datetime] = None
+    store: MinuteStore, session_date: date, as_of: Optional[datetime] = None,
+    coverage: float = 1.0,
 ) -> tuple[float, float]:
     """Sec 5 L4: freeze (RH, RL) from previous day 18:00 through 09:29 today.
 
@@ -343,7 +366,7 @@ def overnight_range(
     # frozen."  `as_of` stays the Sec 2 availability cutoff only.
     bars = _require_bars(store, _asia_start(session_date),
                          snapshot_at(session_date, SNAPSHOT_1), as_of,
-                         "L4 overnight range [prev 18:00,09:29)")
+                         "L4 overnight range [prev 18:00,09:29)", coverage)
     window = aggregate(bars)
     if not window.high > window.low:
         raise NoTrade(
@@ -429,7 +452,8 @@ class DailyContext:
 
 
 def build_daily_context(
-    store: MinuteStore, session_date: date, cost: CostScenario = BASELINE
+    store: MinuteStore, session_date: date, cost: CostScenario = BASELINE,
+    context_coverage: float = 1.0,
 ) -> DailyContext:
     """Freeze the Sec 5 L1/L2/L4 daily context at the 09:29 NY snapshot.
 
@@ -455,7 +479,7 @@ def build_daily_context(
     # any rule runs, and a data gap never masquerades as a rule-based no-trade.
     # Sec 5 L1: "Required context is complete before this snapshot."
     _require_bars(store, _asia_start(session_date), as_of, as_of,
-                  "L1 pre-snapshot context [prev 18:00,09:29)")
+                  "L1 pre-snapshot context [prev 18:00,09:29)", context_coverage)
 
     p0 = snapshot_close(store, session_date, as_of)
 
@@ -473,7 +497,8 @@ def build_daily_context(
         side = "B_low" if b_low is None else "B_high"
         raise NoTrade(f"{side} absent: no candidate strictly beyond P0={p0}")
 
-    touched_low, touched_high = bracket_touches(store, session_date, b_low, b_high, as_of)
+    touched_low, touched_high = bracket_touches(
+        store, session_date, b_low, b_high, as_of, context_coverage)
     # Sec 5 L1: "Both or neither touched: no trade for the day."
     if touched_low == touched_high:
         which = "both brackets touched" if touched_low else "neither bracket touched"
@@ -481,14 +506,14 @@ def build_daily_context(
     # Sec 5 L1: "Only B_low touched: daily bias Long.  Only B_high: Short."
     bias = Direction.LONG if touched_low else Direction.SHORT
 
-    london = classify_london(store, session_date, as_of)
+    london = classify_london(store, session_date, as_of, context_coverage)
     if london is None:
         raise NoTrade("London classification is neither bullish nor bearish")
     # Sec 5 L2: "Require the classification to agree with daily bias."
     if (london == BULLISH) != (bias is Direction.LONG):
         raise NoTrade(f"London {london} disagrees with daily bias {bias.name}")
 
-    rh, rl = overnight_range(store, session_date, as_of)
+    rh, rl = overnight_range(store, session_date, as_of, context_coverage)
 
     return DailyContext(
         session_date=session_date,
