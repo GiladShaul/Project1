@@ -39,6 +39,24 @@ acceptance cases is verified by an executable test suite.
 trading, broker connection, or order-alert integration exists here, and none
 should be built from it without the evidence §7 demands.
 
+## Read this before exporting any data
+
+[`docs/FINDINGS.md`](docs/FINDINGS.md) records the main result of building this,
+and it is not a performance number. Measured over 570 sessions with a full
+13-candle lookback, §5 L1's B_low…B_high bracket around P0 is a median **80.6
+points** wide while the `[00:00,09:29)` touch window sweeps a median **222
+points**, so both levels are touched on an estimated ~62% of days and L1 admits
+only ~31%. L2 admits ~34% of those; L6's reward/risk gate clears ~29% of
+candidate evaluations. Compounded, the expected trade rate is **~2–3% of
+sessions**, against the **~54%** that §7's floor of 100 closed holdout trades
+over a ~186-session holdout requires.
+
+**The registered LB-OPEN experiment is short of its own evidence floor by roughly
+a factor of twenty, and more lookback history makes L1 stricter rather than
+looser.** That is a property of the rules, not of the sample, so collecting more
+data does not fix it. Settle the selectivity question before exporting 39 months
+of dated contract history.
+
 ## Data — the binding constraint
 
 The engine needs synchronized one-minute MNQ OHLC on **dated, unadjusted**
