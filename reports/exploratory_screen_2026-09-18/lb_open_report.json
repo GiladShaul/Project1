@@ -1,0 +1,1150 @@
+{
+  "strategy": "LB-OPEN",
+  "rulebook": "Strategy_Rulebook_v1.md",
+  "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+  "exploratory": true,
+  "range": [
+    "2026-08-21",
+    "2026-09-17"
+  ],
+  "eligible_sessions": 19,
+  "scenarios": {
+    "baseline": {
+      "planned_loss": 63.0,
+      "min_target_points": 64.25,
+      "scored_sessions": 0,
+      "data_quality_exclusions": [
+        {
+          "date": "2026-08-21",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 799/929 minutes in [2026-08-20 18:00, 2026-08-21 09:29) NY as of 2026-08-21 09:29"
+        },
+        {
+          "date": "2026-08-24",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-08-23 18:00, 2026-08-24 09:29) NY as of 2026-08-24 09:29"
+        },
+        {
+          "date": "2026-08-25",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 909/929 minutes in [2026-08-24 18:00, 2026-08-25 09:29) NY as of 2026-08-25 09:29"
+        },
+        {
+          "date": "2026-08-26",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-25 18:00, 2026-08-26 09:29) NY as of 2026-08-26 09:29"
+        },
+        {
+          "date": "2026-08-27",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-26 18:00, 2026-08-27 09:29) NY as of 2026-08-27 09:29"
+        },
+        {
+          "date": "2026-08-28",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-27 18:00, 2026-08-28 09:29) NY as of 2026-08-28 09:29"
+        },
+        {
+          "date": "2026-08-31",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-08-30 18:00, 2026-08-31 09:29) NY as of 2026-08-31 09:29"
+        },
+        {
+          "date": "2026-09-01",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-31 18:00, 2026-09-01 09:29) NY as of 2026-09-01 09:29"
+        },
+        {
+          "date": "2026-09-02",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-01 18:00, 2026-09-02 09:29) NY as of 2026-09-02 09:29"
+        },
+        {
+          "date": "2026-09-03",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-02 18:00, 2026-09-03 09:29) NY as of 2026-09-03 09:29"
+        },
+        {
+          "date": "2026-09-04",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-03 18:00, 2026-09-04 09:29) NY as of 2026-09-04 09:29"
+        },
+        {
+          "date": "2026-09-08",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 569/929 minutes in [2026-09-07 18:00, 2026-09-08 09:29) NY as of 2026-09-08 09:29"
+        },
+        {
+          "date": "2026-09-09",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-08 18:00, 2026-09-09 09:29) NY as of 2026-09-09 09:29"
+        },
+        {
+          "date": "2026-09-10",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-09 18:00, 2026-09-10 09:29) NY as of 2026-09-10 09:29"
+        },
+        {
+          "date": "2026-09-11",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-10 18:00, 2026-09-11 09:29) NY as of 2026-09-11 09:29"
+        },
+        {
+          "date": "2026-09-14",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-09-13 18:00, 2026-09-14 09:29) NY as of 2026-09-14 09:29"
+        },
+        {
+          "date": "2026-09-15",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-14 18:00, 2026-09-15 09:29) NY as of 2026-09-15 09:29"
+        },
+        {
+          "date": "2026-09-16",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-15 18:00, 2026-09-16 09:29) NY as of 2026-09-16 09:29"
+        },
+        {
+          "date": "2026-09-17",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-16 18:00, 2026-09-17 09:29) NY as of 2026-09-17 09:29"
+        }
+      ],
+      "summary": {
+        "trades": 0,
+        "sessions": 0,
+        "sessions_with_trades": 0,
+        "zero_trade_sessions": 0,
+        "calendar_months": 0,
+        "first_session": null,
+        "last_session": null,
+        "winners": 0,
+        "losers": 0,
+        "entry_price_exits": 0,
+        "flat_trades": 0,
+        "win_rate": null,
+        "loss_rate": null,
+        "entry_price_exit_rate": null,
+        "gross_pnl": 0.0,
+        "fees": 0.0,
+        "net_pnl": 0.0,
+        "daily_net_total": 0.0,
+        "reconciled": true,
+        "net_expectancy": null,
+        "gross_expectancy": null,
+        "mean_daily_net": null,
+        "profit_factor": null,
+        "gross_profit_factor": null,
+        "average_win": null,
+        "average_loss": null,
+        "largest_win": null,
+        "largest_loss": null,
+        "entry_price_exit_net": null,
+        "exit_reasons": {},
+        "exit_frequencies": {},
+        "exit_net_pnl": {},
+        "exit_reasons_raw": {},
+        "closed_equity_drawdown": {
+          "max_drawdown": 0.0,
+          "peak_at": null,
+          "trough_at": null,
+          "final_closed_equity_change": 0.0,
+          "observations": 0
+        },
+        "closed_equity_drawdown_by_session": {
+          "max_drawdown": 0.0,
+          "peak_at": null,
+          "trough_at": null,
+          "final_closed_equity_change": 0.0,
+          "observations": 0
+        },
+        "marked_to_market_drawdown": null,
+        "longest_losing_streak": 0,
+        "longest_winning_streak": 0,
+        "worst_day": null,
+        "best_day": null,
+        "positive_days": 0,
+        "negative_days": 0,
+        "flat_days": 0,
+        "exposure": {
+          "in_position_minutes": null,
+          "average_holding_minutes": null,
+          "session_minutes": 0,
+          "ratio": null,
+          "note": "entry/exit timestamps absent for some trades; exposure not computed"
+        },
+        "ambiguous_fills": {
+          "trades": 0,
+          "net_pnl": 0.0,
+          "rate": null
+        },
+        "no_trade_reasons": {},
+        "data_quality_exclusions": 0,
+        "by_month": {},
+        "by_direction": {},
+        "notes": [
+          "Sec 7: a nominal entry-price exit is bucketed separately and is never counted as a net win.",
+          "Sec 8.5: marked-to-market drawdown requires intratrade price paths and is not derivable from closed trades; it is reported as unavailable.",
+          "Sec 3: exposure is measured against the 09:30-12:00 window (150 minutes per eligible session)."
+        ]
+      },
+      "bootstrap": {
+        "L5": {
+          "block_length": 5,
+          "n_sessions": 0,
+          "resamples": 10000,
+          "seed": 20260917,
+          "element_one_based": 500,
+          "interpolation": "none",
+          "rng": "numpy.random.default_rng(20260917)",
+          "bit_generator": "PCG64",
+          "numpy_version": "2.4.6",
+          "observed_daily_mean": null,
+          "lower_bound": null,
+          "n_blocks": 0,
+          "blocks_per_resample": 0,
+          "inconclusive_reason": "0 eligible daily results cannot form a block of length 5"
+        },
+        "L10": {
+          "block_length": 10,
+          "n_sessions": 0,
+          "resamples": 10000,
+          "seed": 20260917,
+          "element_one_based": 500,
+          "interpolation": "none",
+          "rng": "numpy.random.default_rng(20260917)",
+          "bit_generator": "PCG64",
+          "numpy_version": "2.4.6",
+          "observed_daily_mean": null,
+          "lower_bound": null,
+          "n_blocks": 0,
+          "blocks_per_resample": 0,
+          "inconclusive_reason": "0 eligible daily results cannot form a block of length 10"
+        }
+      },
+      "split": {
+        "development": 0,
+        "validation": 0,
+        "holdout": 0
+      },
+      "gates": {
+        "holdout_sample_floor": {
+          "name": "holdout_sample_floor",
+          "status": "INCONCLUSIVE",
+          "detail": "0/100 closed holdout trades, 0/125 holdout sessions, 0/6 calendar months - Sec 7: inadequate history is inconclusive, not a pass - exploratory screen, not acceptance evidence",
+          "observed": {
+            "holdout_trades": 0,
+            "holdout_sessions": 0,
+            "holdout_calendar_months": 0,
+            "required": {
+              "trades": 100,
+              "sessions": 125,
+              "months": 6
+            },
+            "exploratory": true
+          }
+        },
+        "registered_history_span": {
+          "name": "registered_history_span",
+          "status": "INCONCLUSIVE",
+          "detail": "0/36 calendar months of eligible sessions - Sec 7: report the actual shorter span; do not claim the planned validation was performed",
+          "observed": {
+            "calendar_months": 0,
+            "required": 36,
+            "development_sessions": 0,
+            "validation_sessions": 0,
+            "holdout_sessions": 0
+          }
+        },
+        "validation_net_positive": {
+          "name": "validation_net_positive",
+          "status": "INCONCLUSIVE",
+          "detail": "validation net $0.00 over 0 sessions, 0 trades",
+          "observed": {
+            "net_pnl": 0.0,
+            "sessions": 0,
+            "trades": 0
+          }
+        },
+        "holdout_net_positive": {
+          "name": "holdout_net_positive",
+          "status": "INCONCLUSIVE",
+          "detail": "holdout net $0.00 over 0 sessions, 0 trades",
+          "observed": {
+            "net_pnl": 0.0,
+            "sessions": 0,
+            "trades": 0
+          }
+        },
+        "holdout_profit_factor": {
+          "name": "holdout_profit_factor",
+          "status": "INCONCLUSIVE",
+          "detail": "holdout net profit factor undefined (no losing holdout trades) (required >= 1.20)",
+          "observed": {
+            "profit_factor": null,
+            "required": 1.2,
+            "trades": 0
+          }
+        },
+        "bootstrap_lower_bounds": {
+          "name": "bootstrap_lower_bounds",
+          "status": "INCONCLUSIVE",
+          "detail": "L=5 lower bound None, L=10 lower bound None (both required > 0)",
+          "observed": {
+            "lower_bounds": {
+              "L5": null,
+              "L10": null
+            },
+            "seed": 20260917,
+            "resamples": 10000,
+            "element_one_based": 500,
+            "series": "all eligible daily results, including zero-trade days",
+            "n_sessions": 0
+          }
+        },
+        "stress_holdout_net_positive": {
+          "name": "stress_holdout_net_positive",
+          "status": "INCONCLUSIVE",
+          "detail": "stress-run results were not supplied to this gate; Sec 7 requires a rerun under stress costs, not a flat deduction",
+          "observed": {
+            "supplied": false
+          }
+        },
+        "max_closed_drawdown": {
+          "name": "max_closed_drawdown",
+          "status": "INCONCLUSIVE",
+          "detail": "max peak-to-trough closed-equity drawdown $0.00 (limit $1,200.00 = 20 gross risk units at one MNQ)",
+          "observed": {
+            "max_drawdown": 0.0,
+            "limit": 1200.0,
+            "peak_at": null,
+            "trough_at": null,
+            "holdout_max_drawdown": 0.0,
+            "marked_to_market_drawdown": null
+          }
+        },
+        "forward_paper_observation": {
+          "name": "forward_paper_observation",
+          "status": "INCONCLUSIVE",
+          "detail": "requires >= 60 eligible sessions and >= 50 closed trades observed prospectively; Sec 7: \"replay is not prospective paper trading\"",
+          "observed": {
+            "required_sessions": 60,
+            "required_trades": 50,
+            "observed": null
+          }
+        },
+        "overall": {
+          "name": "overall",
+          "status": "INCONCLUSIVE",
+          "detail": "no gate failed, but the evidence is not adequate: 0 pass / 0 fail / 9 inconclusive",
+          "observed": {
+            "pass": 0,
+            "fail": 0,
+            "inconclusive": 9,
+            "exploratory": true,
+            "scenario": null
+          }
+        }
+      },
+      "audit": [
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-21",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 799/929 minutes in [2026-08-20 18:00, 2026-08-21 09:29) NY as of 2026-08-21 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-24",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-08-23 18:00, 2026-08-24 09:29) NY as of 2026-08-24 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-25",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 909/929 minutes in [2026-08-24 18:00, 2026-08-25 09:29) NY as of 2026-08-25 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-26",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-25 18:00, 2026-08-26 09:29) NY as of 2026-08-26 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-27",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-26 18:00, 2026-08-27 09:29) NY as of 2026-08-27 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-28",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-27 18:00, 2026-08-28 09:29) NY as of 2026-08-28 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-31",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-08-30 18:00, 2026-08-31 09:29) NY as of 2026-08-31 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-01",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-31 18:00, 2026-09-01 09:29) NY as of 2026-09-01 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-02",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-01 18:00, 2026-09-02 09:29) NY as of 2026-09-02 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-03",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-02 18:00, 2026-09-03 09:29) NY as of 2026-09-03 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-04",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-03 18:00, 2026-09-04 09:29) NY as of 2026-09-04 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-08",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 569/929 minutes in [2026-09-07 18:00, 2026-09-08 09:29) NY as of 2026-09-08 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-09",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-08 18:00, 2026-09-09 09:29) NY as of 2026-09-09 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-10",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-09 18:00, 2026-09-10 09:29) NY as of 2026-09-10 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-11",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-10 18:00, 2026-09-11 09:29) NY as of 2026-09-11 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-14",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-09-13 18:00, 2026-09-14 09:29) NY as of 2026-09-14 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-15",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-14 18:00, 2026-09-15 09:29) NY as of 2026-09-15 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-16",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-15 18:00, 2026-09-16 09:29) NY as of 2026-09-16 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "baseline",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-17",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-16 18:00, 2026-09-17 09:29) NY as of 2026-09-17 09:29",
+          "candidates": [],
+          "trade": null
+        }
+      ]
+    },
+    "stress": {
+      "planned_loss": 67.0,
+      "min_target_points": 69.5,
+      "scored_sessions": 0,
+      "data_quality_exclusions": [
+        {
+          "date": "2026-08-21",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 799/929 minutes in [2026-08-20 18:00, 2026-08-21 09:29) NY as of 2026-08-21 09:29"
+        },
+        {
+          "date": "2026-08-24",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-08-23 18:00, 2026-08-24 09:29) NY as of 2026-08-24 09:29"
+        },
+        {
+          "date": "2026-08-25",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 909/929 minutes in [2026-08-24 18:00, 2026-08-25 09:29) NY as of 2026-08-25 09:29"
+        },
+        {
+          "date": "2026-08-26",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-25 18:00, 2026-08-26 09:29) NY as of 2026-08-26 09:29"
+        },
+        {
+          "date": "2026-08-27",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-26 18:00, 2026-08-27 09:29) NY as of 2026-08-27 09:29"
+        },
+        {
+          "date": "2026-08-28",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-27 18:00, 2026-08-28 09:29) NY as of 2026-08-28 09:29"
+        },
+        {
+          "date": "2026-08-31",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-08-30 18:00, 2026-08-31 09:29) NY as of 2026-08-31 09:29"
+        },
+        {
+          "date": "2026-09-01",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-31 18:00, 2026-09-01 09:29) NY as of 2026-09-01 09:29"
+        },
+        {
+          "date": "2026-09-02",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-01 18:00, 2026-09-02 09:29) NY as of 2026-09-02 09:29"
+        },
+        {
+          "date": "2026-09-03",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-02 18:00, 2026-09-03 09:29) NY as of 2026-09-03 09:29"
+        },
+        {
+          "date": "2026-09-04",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-03 18:00, 2026-09-04 09:29) NY as of 2026-09-04 09:29"
+        },
+        {
+          "date": "2026-09-08",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 569/929 minutes in [2026-09-07 18:00, 2026-09-08 09:29) NY as of 2026-09-08 09:29"
+        },
+        {
+          "date": "2026-09-09",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-08 18:00, 2026-09-09 09:29) NY as of 2026-09-09 09:29"
+        },
+        {
+          "date": "2026-09-10",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-09 18:00, 2026-09-10 09:29) NY as of 2026-09-10 09:29"
+        },
+        {
+          "date": "2026-09-11",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-10 18:00, 2026-09-11 09:29) NY as of 2026-09-11 09:29"
+        },
+        {
+          "date": "2026-09-14",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-09-13 18:00, 2026-09-14 09:29) NY as of 2026-09-14 09:29"
+        },
+        {
+          "date": "2026-09-15",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-14 18:00, 2026-09-15 09:29) NY as of 2026-09-15 09:29"
+        },
+        {
+          "date": "2026-09-16",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-15 18:00, 2026-09-16 09:29) NY as of 2026-09-16 09:29"
+        },
+        {
+          "date": "2026-09-17",
+          "coverage": 1.0,
+          "reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-16 18:00, 2026-09-17 09:29) NY as of 2026-09-17 09:29"
+        }
+      ],
+      "summary": {
+        "trades": 0,
+        "sessions": 0,
+        "sessions_with_trades": 0,
+        "zero_trade_sessions": 0,
+        "calendar_months": 0,
+        "first_session": null,
+        "last_session": null,
+        "winners": 0,
+        "losers": 0,
+        "entry_price_exits": 0,
+        "flat_trades": 0,
+        "win_rate": null,
+        "loss_rate": null,
+        "entry_price_exit_rate": null,
+        "gross_pnl": 0.0,
+        "fees": 0.0,
+        "net_pnl": 0.0,
+        "daily_net_total": 0.0,
+        "reconciled": true,
+        "net_expectancy": null,
+        "gross_expectancy": null,
+        "mean_daily_net": null,
+        "profit_factor": null,
+        "gross_profit_factor": null,
+        "average_win": null,
+        "average_loss": null,
+        "largest_win": null,
+        "largest_loss": null,
+        "entry_price_exit_net": null,
+        "exit_reasons": {},
+        "exit_frequencies": {},
+        "exit_net_pnl": {},
+        "exit_reasons_raw": {},
+        "closed_equity_drawdown": {
+          "max_drawdown": 0.0,
+          "peak_at": null,
+          "trough_at": null,
+          "final_closed_equity_change": 0.0,
+          "observations": 0
+        },
+        "closed_equity_drawdown_by_session": {
+          "max_drawdown": 0.0,
+          "peak_at": null,
+          "trough_at": null,
+          "final_closed_equity_change": 0.0,
+          "observations": 0
+        },
+        "marked_to_market_drawdown": null,
+        "longest_losing_streak": 0,
+        "longest_winning_streak": 0,
+        "worst_day": null,
+        "best_day": null,
+        "positive_days": 0,
+        "negative_days": 0,
+        "flat_days": 0,
+        "exposure": {
+          "in_position_minutes": null,
+          "average_holding_minutes": null,
+          "session_minutes": 0,
+          "ratio": null,
+          "note": "entry/exit timestamps absent for some trades; exposure not computed"
+        },
+        "ambiguous_fills": {
+          "trades": 0,
+          "net_pnl": 0.0,
+          "rate": null
+        },
+        "no_trade_reasons": {},
+        "data_quality_exclusions": 0,
+        "by_month": {},
+        "by_direction": {},
+        "notes": [
+          "Sec 7: a nominal entry-price exit is bucketed separately and is never counted as a net win.",
+          "Sec 8.5: marked-to-market drawdown requires intratrade price paths and is not derivable from closed trades; it is reported as unavailable.",
+          "Sec 3: exposure is measured against the 09:30-12:00 window (150 minutes per eligible session)."
+        ]
+      },
+      "bootstrap": {
+        "L5": {
+          "block_length": 5,
+          "n_sessions": 0,
+          "resamples": 10000,
+          "seed": 20260917,
+          "element_one_based": 500,
+          "interpolation": "none",
+          "rng": "numpy.random.default_rng(20260917)",
+          "bit_generator": "PCG64",
+          "numpy_version": "2.4.6",
+          "observed_daily_mean": null,
+          "lower_bound": null,
+          "n_blocks": 0,
+          "blocks_per_resample": 0,
+          "inconclusive_reason": "0 eligible daily results cannot form a block of length 5"
+        },
+        "L10": {
+          "block_length": 10,
+          "n_sessions": 0,
+          "resamples": 10000,
+          "seed": 20260917,
+          "element_one_based": 500,
+          "interpolation": "none",
+          "rng": "numpy.random.default_rng(20260917)",
+          "bit_generator": "PCG64",
+          "numpy_version": "2.4.6",
+          "observed_daily_mean": null,
+          "lower_bound": null,
+          "n_blocks": 0,
+          "blocks_per_resample": 0,
+          "inconclusive_reason": "0 eligible daily results cannot form a block of length 10"
+        }
+      },
+      "split": {
+        "development": 0,
+        "validation": 0,
+        "holdout": 0
+      },
+      "gates": {
+        "holdout_sample_floor": {
+          "name": "holdout_sample_floor",
+          "status": "INCONCLUSIVE",
+          "detail": "0/100 closed holdout trades, 0/125 holdout sessions, 0/6 calendar months - Sec 7: inadequate history is inconclusive, not a pass - exploratory screen, not acceptance evidence",
+          "observed": {
+            "holdout_trades": 0,
+            "holdout_sessions": 0,
+            "holdout_calendar_months": 0,
+            "required": {
+              "trades": 100,
+              "sessions": 125,
+              "months": 6
+            },
+            "exploratory": true
+          }
+        },
+        "registered_history_span": {
+          "name": "registered_history_span",
+          "status": "INCONCLUSIVE",
+          "detail": "0/36 calendar months of eligible sessions - Sec 7: report the actual shorter span; do not claim the planned validation was performed",
+          "observed": {
+            "calendar_months": 0,
+            "required": 36,
+            "development_sessions": 0,
+            "validation_sessions": 0,
+            "holdout_sessions": 0
+          }
+        },
+        "validation_net_positive": {
+          "name": "validation_net_positive",
+          "status": "INCONCLUSIVE",
+          "detail": "validation net $0.00 over 0 sessions, 0 trades",
+          "observed": {
+            "net_pnl": 0.0,
+            "sessions": 0,
+            "trades": 0
+          }
+        },
+        "holdout_net_positive": {
+          "name": "holdout_net_positive",
+          "status": "INCONCLUSIVE",
+          "detail": "holdout net $0.00 over 0 sessions, 0 trades",
+          "observed": {
+            "net_pnl": 0.0,
+            "sessions": 0,
+            "trades": 0
+          }
+        },
+        "holdout_profit_factor": {
+          "name": "holdout_profit_factor",
+          "status": "INCONCLUSIVE",
+          "detail": "holdout net profit factor undefined (no losing holdout trades) (required >= 1.20)",
+          "observed": {
+            "profit_factor": null,
+            "required": 1.2,
+            "trades": 0
+          }
+        },
+        "bootstrap_lower_bounds": {
+          "name": "bootstrap_lower_bounds",
+          "status": "INCONCLUSIVE",
+          "detail": "L=5 lower bound None, L=10 lower bound None (both required > 0)",
+          "observed": {
+            "lower_bounds": {
+              "L5": null,
+              "L10": null
+            },
+            "seed": 20260917,
+            "resamples": 10000,
+            "element_one_based": 500,
+            "series": "all eligible daily results, including zero-trade days",
+            "n_sessions": 0
+          }
+        },
+        "stress_holdout_net_positive": {
+          "name": "stress_holdout_net_positive",
+          "status": "INCONCLUSIVE",
+          "detail": "stress-run results were not supplied to this gate; Sec 7 requires a rerun under stress costs, not a flat deduction",
+          "observed": {
+            "supplied": false
+          }
+        },
+        "max_closed_drawdown": {
+          "name": "max_closed_drawdown",
+          "status": "INCONCLUSIVE",
+          "detail": "max peak-to-trough closed-equity drawdown $0.00 (limit $1,200.00 = 20 gross risk units at one MNQ)",
+          "observed": {
+            "max_drawdown": 0.0,
+            "limit": 1200.0,
+            "peak_at": null,
+            "trough_at": null,
+            "holdout_max_drawdown": 0.0,
+            "marked_to_market_drawdown": null
+          }
+        },
+        "forward_paper_observation": {
+          "name": "forward_paper_observation",
+          "status": "INCONCLUSIVE",
+          "detail": "requires >= 60 eligible sessions and >= 50 closed trades observed prospectively; Sec 7: \"replay is not prospective paper trading\"",
+          "observed": {
+            "required_sessions": 60,
+            "required_trades": 50,
+            "observed": null
+          }
+        },
+        "overall": {
+          "name": "overall",
+          "status": "INCONCLUSIVE",
+          "detail": "no gate failed, but the evidence is not adequate: 0 pass / 0 fail / 9 inconclusive",
+          "observed": {
+            "pass": 0,
+            "fail": 0,
+            "inconclusive": 9,
+            "exploratory": true,
+            "scenario": null
+          }
+        }
+      },
+      "audit": [
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-21",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 799/929 minutes in [2026-08-20 18:00, 2026-08-21 09:29) NY as of 2026-08-21 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-24",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-08-23 18:00, 2026-08-24 09:29) NY as of 2026-08-24 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-25",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 909/929 minutes in [2026-08-24 18:00, 2026-08-25 09:29) NY as of 2026-08-25 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-26",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-25 18:00, 2026-08-26 09:29) NY as of 2026-08-26 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-27",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-26 18:00, 2026-08-27 09:29) NY as of 2026-08-27 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-28",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-27 18:00, 2026-08-28 09:29) NY as of 2026-08-28 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-08-31",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-08-30 18:00, 2026-08-31 09:29) NY as of 2026-08-31 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-01",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-08-31 18:00, 2026-09-01 09:29) NY as of 2026-09-01 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-02",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-01 18:00, 2026-09-02 09:29) NY as of 2026-09-02 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-03",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-02 18:00, 2026-09-03 09:29) NY as of 2026-09-03 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-04",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-03 18:00, 2026-09-04 09:29) NY as of 2026-09-04 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-08",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 569/929 minutes in [2026-09-07 18:00, 2026-09-08 09:29) NY as of 2026-09-08 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-09",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-08 18:00, 2026-09-09 09:29) NY as of 2026-09-09 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-10",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-09 18:00, 2026-09-10 09:29) NY as of 2026-09-10 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-11",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-10 18:00, 2026-09-11 09:29) NY as of 2026-09-11 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-14",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 918/929 minutes in [2026-09-13 18:00, 2026-09-14 09:29) NY as of 2026-09-14 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-15",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-14 18:00, 2026-09-15 09:29) NY as of 2026-09-15 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-16",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-15 18:00, 2026-09-16 09:29) NY as of 2026-09-16 09:29",
+          "candidates": [],
+          "trade": null
+        },
+        {
+          "strategy": "LB-OPEN",
+          "version": "v1.0",
+          "scenario": "stress",
+          "source": "Yahoo Finance NQ=F continuous front-month (exploratory)",
+          "ny_date": "2026-09-17",
+          "excluded": true,
+          "coverage_ratio": 1.0,
+          "no_trade_reason": "missing context data: L1 pre-snapshot context [prev 18:00,09:29): 919/929 minutes in [2026-09-16 18:00, 2026-09-17 09:29) NY as of 2026-09-17 09:29",
+          "candidates": [],
+          "trade": null
+        }
+      ]
+    }
+  },
+  "evidentiary_status": "EXPLORATORY SCREEN - not acceptance evidence under Sec 7. Sec 7: 'A lack of adequate history is inconclusive, not a pass.'"
+}
