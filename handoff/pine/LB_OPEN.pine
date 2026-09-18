@@ -1,0 +1,523 @@
+// =============================================================================
+// LB-OPEN  —  TradingView Pine v6 strategy
+// =============================================================================
+//
+//  !! NEVER COMPILED !!
+//
+//  This file was written without access to a Pine compiler or to TradingView.
+//  It has NOT been syntax-checked, compiled, or run. Expect compile errors.
+//
+//  LB_OPEN_ALGORITHM.md is the authoritative specification. Where this script
+//  and that document disagree, the document is right and this file is wrong.
+//
+//  Validate any working build against acceptance_vectors.json before trusting
+//  a single result. In particular assert P0 = 19997.00 (NOT 20000.00) on the
+//  supplied fixture — see §12 of the spec.
+//
+//  WHAT THIS FILE IS FOR: the architecture, not the syntax. Two decisions here
+//  are non-obvious and cost real time to rediscover —
+//    (1) the accumulate-by-date pattern that avoids Pine's max_bars_back limit
+//        (see HAZARD 1 below), and
+//    (2) per-bar storage of the L1 touch window, because an aggregate range
+//        cannot answer the touch question (see HAZARD 4).
+//
+// -----------------------------------------------------------------------------
+// HAZARDS — read before editing
+// -----------------------------------------------------------------------------
+// 1. max_bars_back. On a 1-minute chart one calendar week is ~7,200 bars, well
+//    past Pine's 5,000-bar historical reference ceiling. The '1w' and '24h'
+//    LookBack candles therefore CANNOT be read with `high[n]`. This script
+//    instead ACCUMULATES each required 30-minute window as it happens and
+//    stores it keyed by date. Do not "simplify" that back into indexing.
+// 2. Deep Backtesting is required for any meaningful history, and it must be
+//    enabled explicitly — the ordinary strategy tester covers only loaded bars.
+// 3. The broker emulator does NOT implement the adverse-ordering rule of §9.4.
+//    Where a bar could plausibly hit both stop and target, Pine's own result is
+//    optimistic. Bar Magnifier helps but does not guarantee intrabar order.
+//    Any native result is a PRELIMINARY SCREEN, not acceptance evidence.
+// 4. The L1 touch test needs PER-BAR highs/lows: a level can sit inside the
+//    aggregate [min_low, max_high] of the window and still never have been
+//    inside any single minute. Storing only the range is a silent bug.
+// 5. Use a DATED, unadjusted contract (e.g. MNQZ2025) and never let a run span
+//    a roll. A continuous series makes L1's absolute levels meaningless.
+// 6. Set Properties explicitly; Inputs do not set them. 1 contract, pyramiding
+//    0, $50,000 capital, $1.25/side commission, 1 tick slippage.
+// =============================================================================
+
+//@version=6
+strategy("LB-OPEN v1", overlay = true,
+     pyramiding                 = 0,
+     default_qty_type           = strategy.fixed,
+     default_qty_value          = 1,
+     initial_capital            = 50000,
+     commission_type            = strategy.commission.cash_per_contract,
+     commission_value           = 1.25,
+     slippage                   = 1,              // ticks
+     calc_on_every_tick         = false,          // decisions on closed bars only
+     calc_on_order_fills        = false,
+     process_orders_on_close    = false,
+     max_bars_back              = 5000,
+     max_labels_count           = 500)
+
+// ---- cost scenario ----------------------------------------------------------
+scenario   = input.string("baseline", "Cost scenario", options = ["baseline", "stress"])
+isStress   = scenario == "stress"
+perSideFee = isStress ? 2.50 : 1.25
+slipTicks  = isStress ? 4.0  : 1.0
+verifyTick = isStress ? 2    : 1
+
+POINT   = 2.0            // $ per index point
+TICK    = 0.25
+TICKVAL = TICK * POINT   // $0.50
+STOP_PTS = 30.0
+
+roundTripFees = 2.0 * perSideFee
+plannedLoss   = STOP_PTS * POINT + roundTripFees + slipTicks * TICKVAL
+minRR         = 2.0
+// baseline 63.00 -> 64.25 pts ; stress 67.00 -> 69.50 pts
+minTargetPts  = math.ceil(((minRR * plannedLoss + roundTripFees) / POINT) / TICK) * TICK
+
+ctxCoverage = input.float(1.0, "Pre-snapshot context coverage floor",
+     minval = 0.90, maxval = 1.0, step = 0.01,
+     tooltip = "1.0 = strictest reading. Anything lower is a DECLARED DEPARTURE " +
+               "and must be reported with results. See spec §10.1.")
+
+// ---- NY clock ---------------------------------------------------------------
+TZ = "America/New_York"
+nyH = hour  (time, TZ)
+nyM = minute(time, TZ)
+nyMin = nyH * 60 + nyM                      // minutes since NY midnight
+nyDate = math.floor(time / 86400000)        // not NY-aligned; use only for deltas
+
+sessDate = str.format("{0,number,0000}-{1,number,00}-{2,number,00}",
+     year(time, TZ), month(time, TZ), dayofmonth(time, TZ))
+
+M_1800 = 18 * 60
+M_0000 = 0
+M_0600 = 6  * 60
+M_0929 = 9  * 60 + 29
+M_0930 = 9  * 60 + 30
+M_0944 = 9  * 60 + 44
+M_0945 = 9  * 60 + 45
+M_1000 = 10 * 60
+M_1200 = 12 * 60
+M_1600 = 16 * 60
+
+isNewNyDay = ta.change(dayofmonth(time, TZ)) != 0
+
+// =============================================================================
+// Accumulators — every window the algorithm needs, built as it happens
+// =============================================================================
+// Rationale: see HAZARD 1. Each helper accumulates an OHLC over a wall-clock
+// window and publishes it when the window closes.
+
+// ---- regular-session daily OHLC [09:30,16:00) for L1 ------------------------
+var array<string> dDate  = array.new_string()
+var array<float>  dOpen  = array.new_float()
+var array<float>  dHigh  = array.new_float()
+var array<float>  dLow   = array.new_float()
+var array<float>  dClose = array.new_float()
+var array<int>    dBars  = array.new_int()
+
+var float rthO = na, rthH = na, rthL = na, rthC = na
+var int   rthN = 0
+
+inRTH = nyMin >= M_0930 and nyMin < M_1600
+if inRTH
+    if na(rthO) or nyMin == M_0930
+        rthO := open
+        rthH := high
+        rthL := low
+        rthN := 0
+    rthH := math.max(nz(rthH, high), high)
+    rthL := math.min(nz(rthL, low),  low)
+    rthC := close
+    rthN += 1
+// publish once the session has ended
+if not inRTH and not na(rthO) and nyMin >= M_1600
+    array.push(dDate, sessDate), array.push(dOpen, rthO), array.push(dHigh, rthH)
+    array.push(dLow,  rthL),     array.push(dClose, rthC), array.push(dBars, rthN)
+    rthO := na
+
+// ---- the ten 30-minute LookBack windows -------------------------------------
+// Anchors 09:30 and 09:45; offsets 3h, 6h, 12h, 24h, 1w.
+//   from 09:30 -> starts 06:30, 03:30, 21:30(prev), 09:30(prev), 09:30(-7d)
+//   from 09:45 -> starts 06:45, 03:45, 21:45(prev), 09:45(prev), 09:45(-7d)
+// The 24h and 1w candidates reuse the 09:30 / 09:45 windows of earlier dates,
+// so only FOUR distinct start times need storing, each keyed by date.
+LB_STARTS = array.from(M_0930, M_0945, 6 * 60 + 30, 6 * 60 + 45, 21 * 60 + 30, 21 * 60 + 45, 3 * 60 + 30, 3 * 60 + 45)
+
+type Win
+    string key          // "<date>@<startMinute>"
+    float  o
+    float  h
+    float  l
+    float  c
+    int    n
+
+var array<Win> wins = array.new<Win>()
+
+var float wO = na, wH = na, wL = na, wC = na
+var int   wN = 0, wStart = -1
+var string wKey = ""
+
+startsHere = array.includes(LB_STARTS, nyMin)
+if startsHere
+    wO := open, wH := high, wL := low, wC := close, wN := 1
+    wStart := nyMin
+    wKey := sessDate + "@" + str.tostring(nyMin)
+else if wStart >= 0 and nyMin > wStart and nyMin < wStart + 30
+    wH := math.max(wH, high), wL := math.min(wL, low), wC := close
+    wN += 1
+if wStart >= 0 and nyMin >= wStart + 30
+    // Spec §8.1: the interval must be ENTIRELY complete — all 30 minutes.
+    if wN == 30
+        array.push(wins, Win.new(wKey, wO, wH, wL, wC, wN))
+    wStart := -1
+
+getWin(string key) =>
+    Win found = na
+    if array.size(wins) > 0
+        for i = array.size(wins) - 1 to math.max(0, array.size(wins) - 400)
+            w = array.get(wins, i)
+            if w.key == key
+                found := w
+                break
+    found
+
+// ---- Asia / London / overnight range ----------------------------------------
+var float asiaH = na, asiaL = na
+var float lonH  = na, lonL = na, lonC = na
+var float onH   = na, onL  = na
+var int   asiaN = 0, lonN = 0, onN = 0
+
+// Asia = previous calendar day [18:00,00:00); reset when it begins.
+if nyMin == M_1800
+    asiaH := high, asiaL := low, asiaN := 0
+    onH := high, onL := low, onN := 0        // overnight range starts here too
+if nyMin >= M_1800
+    asiaH := math.max(nz(asiaH, high), high), asiaL := math.min(nz(asiaL, low), low)
+    asiaN += 1
+if nyMin < M_0600 and nyMin >= M_0000
+    if nyMin == M_0000
+        lonH := high, lonL := low, lonN := 0
+    lonH := math.max(nz(lonH, high), high), lonL := math.min(nz(lonL, low), low)
+    lonC := close
+    lonN += 1
+// overnight proxy accumulates from 18:00 prev through 09:29 today
+if nyMin < M_0929 or nyMin >= M_1800
+    onH := math.max(nz(onH, high), high), onL := math.min(nz(onL, low), low)
+    onN += 1
+
+// ---- L1 touch window, stored PER BAR (see HAZARD 4) -------------------------
+var array<float> tHigh = array.new_float()
+var array<float> tLow  = array.new_float()
+if nyMin == M_0000
+    array.clear(tHigh), array.clear(tLow)
+if nyMin >= M_0000 and nyMin < M_0929
+    array.push(tHigh, high), array.push(tLow, low)
+
+touched(float level) =>
+    bool hit = false
+    if array.size(tHigh) > 0
+        for i = 0 to array.size(tHigh) - 1
+            // Spec §5.4: this is the ONE inclusive comparison in the algorithm.
+            if array.get(tLow, i) <= level and level <= array.get(tHigh, i)
+                hit := true
+                break
+    hit
+
+// =============================================================================
+// Swings (spec §8.2, Gate 2)
+// =============================================================================
+// Strictly higher/lower than BOTH immediate neighbours; confirmed only once the
+// right neighbour closes; equal highs/lows form no swing; consumption is
+// permanent. History resets at 18:00.
+
+var array<float> swHi = array.new_float(), swHiT = array.new_int()
+var array<float> swLo = array.new_float(), swLoT = array.new_int()
+var array<bool>  swHiUsed = array.new_bool(), swLoUsed = array.new_bool()
+
+if nyMin == M_1800
+    array.clear(swHi), array.clear(swHiT), array.clear(swHiUsed)
+    array.clear(swLo), array.clear(swLoT), array.clear(swLoUsed)
+
+// Adjacency: bars must be genuinely consecutive minutes (spec §8.2 note).
+adjacent = (time - time[1] == 60000) and (time[1] - time[2] == 60000)
+
+if adjacent
+    if high[1] > high[2] and high[1] > high     // strict on both sides
+        array.push(swHi, high[1]), array.push(swHiT, time[1]), array.push(swHiUsed, false)
+    if low[1] < low[2] and low[1] < low
+        array.push(swLo, low[1]),  array.push(swLoT, time[1]),  array.push(swLoUsed, false)
+
+// Consumption — strict crossing, from the confirming bar onward, permanent.
+if array.size(swHi) > 0
+    for i = 0 to array.size(swHi) - 1
+        if not array.get(swHiUsed, i) and high > array.get(swHi, i)
+            array.set(swHiUsed, i, true)
+if array.size(swLo) > 0
+    for i = 0 to array.size(swLo) - 1
+        if not array.get(swLoUsed, i) and low < array.get(swLo, i)
+            array.set(swLoUsed, i, true)
+
+// Nearest unconsumed swing low strictly below E / high strictly above E.
+// Ties: most recently confirmed (spec §8.2).
+nearestLoBelow(float e) =>
+    float best = na
+    int   bestT = 0
+    if array.size(swLo) > 0
+        for i = 0 to array.size(swLo) - 1
+            lv = array.get(swLo, i)
+            if not array.get(swLoUsed, i) and lv < e
+                if na(best) or lv > best or (lv == best and array.get(swLoT, i) > bestT)
+                    best := lv, bestT := array.get(swLoT, i)
+    best
+
+nearestHiAbove(float e) =>
+    float best = na
+    int   bestT = 0
+    if array.size(swHi) > 0
+        for i = 0 to array.size(swHi) - 1
+            lv = array.get(swHi, i)
+            if not array.get(swHiUsed, i) and lv > e
+                if na(best) or lv < best or (lv == best and array.get(swHiT, i) > bestT)
+                    best := lv, bestT := array.get(swHiT, i)
+    best
+
+// =============================================================================
+// L1 / L2 / L4 — frozen daily context at 09:29
+// =============================================================================
+var float P0 = na, bLow = na, bHigh = na
+var int   bias = 0                     // +1 long, -1 short, 0 none
+var float RH = na, RL = na
+var string londonCls = ""
+var bool  dayLive = false
+var bool  orderSubmitted = false       // spec §4: disables window 2
+
+// Pool the 13 same-weekday daily candles at -7..-91 days.
+// Implementation note: dates are compared as strings, so build the target keys
+// with the same formatter used for sessDate.
+dateMinusDays(int n) =>
+    t = time - n * 86400000
+    str.format("{0,number,0000}-{1,number,00}-{2,number,00}",
+         year(t, TZ), month(t, TZ), dayofmonth(t, TZ))
+
+if nyMin == M_0929
+    dayLive := false
+    orderSubmitted := false
+    P0 := close                        // close of the minute ENDING 09:29
+    bLow := na, bHigh := na, bias := 0
+
+    // --- L1 brackets ---
+    int used = 0
+    for w = 1 to 13
+        key = dateMinusDays(7 * w)
+        idx = array.indexof(dDate, key)
+        if idx >= 0 and array.get(dBars, idx) == 390      // full RTH session only
+            used += 1
+            for p in array.from(array.get(dOpen, idx), array.get(dHigh, idx), array.get(dLow, idx), array.get(dClose, idx))
+                if p < P0 and (na(bLow)  or p > bLow)
+                    bLow  := p
+                if p > P0 and (na(bHigh) or p < bHigh)
+                    bHigh := p
+
+    okData = used >= 1 and not na(bLow) and not na(bHigh)
+         and array.size(tHigh) >= math.round(569 * ctxCoverage)
+         and asiaN >= math.round(360 * ctxCoverage)
+         and lonN  >= math.round(360 * ctxCoverage)
+         and onN   >= math.round(929 * ctxCoverage)
+
+    if okData
+        tl = touched(bLow)
+        th = touched(bHigh)
+        bias := tl and not th ? 1 : th and not tl ? -1 : 0   // both/neither -> 0
+
+        // --- L2 London (all comparisons strict) ---
+        bull = (lonL < asiaL and lonH < asiaH and lonC > asiaL) or (lonH > asiaH and lonC > asiaH)
+        bear = (lonH > asiaH and lonL > asiaL and lonC < asiaH) or (lonL < asiaL and lonC < asiaL)
+        londonCls := bull and not bear ? "bullish" : bear and not bull ? "bearish" : ""
+        agree = (bias == 1 and londonCls == "bullish") or (bias == -1 and londonCls == "bearish")
+
+        // --- L4 overnight range ---
+        RH := onH, RL := onL
+        dayLive := bias != 0 and agree and not na(RH) and not na(RL) and RH > RL
+    else
+        dayLive := false
+
+locationOK(float e) =>
+    x = (e - RL) / (RH - RL)
+    bias == 1 ? x < 0.40 : x > 0.60
+
+// =============================================================================
+// L3 / L6 — per-window candidate selection
+// =============================================================================
+var float fE = na, fStop = na, fTarget = na, fSwing = na
+var float fZoneLo = na, fZoneHi = na
+var int   fWindow = 0
+var bool  armed = false
+
+// Snap a target toward E so an off-grid level can never flatter the L6 gate.
+snapToward(float lvl, float e) =>
+    t = lvl / TICK
+    (bias == 1 ? math.floor(t) : math.ceil(t)) * TICK
+
+selectSetup(int anchorMin, int snapMin) =>
+    float chosenE = na, chosenT = na, chosenSw = na, chosenZL = na, chosenZH = na
+    P = close
+
+    // Offsets in rank order 3h, 6h, 12h, 24h, 1w (spec §8.1).
+    offMin  = array.from(anchorMin - 180, anchorMin - 360, anchorMin - 720, anchorMin, anchorMin)
+    offDays = array.from(0, 0, 1, 1, 7)
+
+    // Gather AVAILABLE candles first — spec §8.2 Gate 3 draws target boundaries
+    // from the available set, NOT from the entry-eligible subset.
+    var array<float> availHi = array.new_float()
+    var array<float> availLo = array.new_float()
+    array.clear(availHi), array.clear(availLo)
+
+    array<float> candE  = array.new_float()
+    array<float> candZL = array.new_float()
+    array<float> candZH = array.new_float()
+    array<int>   candIx = array.new_int()
+
+    for k = 0 to 4
+        m = array.get(offMin, k)
+        d = array.get(offDays, k)
+        // 12h from 09:30 lands at 21:30 on the PREVIOUS day.
+        mm = m < 0 ? m + 1440 : m
+        dd = m < 0 ? d + 1    : d
+        key = dateMinusDays(dd) + "@" + str.tostring(mm)
+        w = getWin(key)
+        if not na(w)
+            array.push(availHi, w.h), array.push(availLo, w.l)
+            zl = bias == 1 ? math.max(w.o, w.c) : w.l
+            zh = bias == 1 ? w.h : math.min(w.o, w.c)
+            e  = bias == 1 ? w.h : w.l
+            eligible = zl != zh and (bias == 1 ? e < P : e > P)
+            if eligible
+                array.push(candE, e), array.push(candZL, zl), array.push(candZH, zh)
+                array.push(candIx, k)
+
+    // Rank by abs(E - P); ties by shorter offset (already in rank order).
+    if array.size(candE) > 0
+        for a = 0 to array.size(candE) - 2
+            for b = a + 1 to array.size(candE) - 1
+                da = math.abs(array.get(candE, a) - P)
+                db = math.abs(array.get(candE, b) - P)
+                if db < da or (db == da and array.get(candIx, b) < array.get(candIx, a))
+                    for arr in array.from(candE, candZL, candZH)
+                        tmp = array.get(arr, a)
+                        array.set(arr, a, array.get(arr, b)), array.set(arr, b, tmp)
+                    ti = array.get(candIx, a)
+                    array.set(candIx, a, array.get(candIx, b)), array.set(candIx, b, ti)
+
+        // Gates in order: location, liquidity, target (spec §8.2).
+        for i = 0 to array.size(candE) - 1
+            e = array.get(candE, i)
+            if locationOK(e)
+                sw = bias == 1 ? nearestLoBelow(e) : nearestHiAbove(e)
+                if not na(sw)
+                    // Target set: directional swings + OTHER available candles' boundaries.
+                    float best = na
+                    if bias == 1
+                        for j = 0 to array.size(swHi) - 1
+                            lv = array.get(swHi, j)
+                            if not array.get(swHiUsed, j) and lv > e and (na(best) or lv < best)
+                                best := lv
+                    else
+                        for j = 0 to array.size(swLo) - 1
+                            lv = array.get(swLo, j)
+                            if not array.get(swLoUsed, j) and lv < e and (na(best) or lv > best)
+                                best := lv
+                    for j = 0 to array.size(availHi) - 1
+                        if j != array.get(candIx, i)
+                            for lv in array.from(array.get(availHi, j), array.get(availLo, j))
+                                if bias == 1 ? lv > e : lv < e
+                                    if na(best) or (bias == 1 ? lv < best : lv > best)
+                                        best := lv
+                    if not na(best)
+                        T = snapToward(best, e)
+                        // Only the NEAREST is ever gated — never search past it.
+                        if (math.abs(T - e) * POINT - roundTripFees) / plannedLoss >= minRR
+                            chosenE := e, chosenT := T, chosenSw := sw
+                            chosenZL := array.get(candZL, i), chosenZH := array.get(candZH, i)
+                            break
+    [chosenE, chosenT, chosenSw, chosenZL, chosenZH]
+
+// Freeze window 1 at 09:29, window 2 at 09:44 (context stays frozen).
+if dayLive and nyMin == M_0929
+    [e, t, sw, zl, zh] = selectSetup(M_0930, M_0929)
+    fE := e, fTarget := t, fSwing := sw, fZoneLo := zl, fZoneHi := zh
+    fWindow := 1
+    armed := not na(e)
+if dayLive and nyMin == M_0944 and not orderSubmitted and strategy.position_size == 0
+    [e, t, sw, zl, zh] = selectSetup(M_0945, M_0944)
+    fE := e, fTarget := t, fSwing := sw, fZoneLo := zl, fZoneHi := zh
+    fWindow := 2
+    armed := not na(e)
+
+// Spec §9.1: swept during 09:29-09:30 (w1) or 09:44-09:45 (w2) -> expire.
+preSweep = (fWindow == 1 and nyMin == M_0929) or (fWindow == 2 and nyMin == M_0944)
+if armed and preSweep
+    if bias == 1 ? low < fSwing : high > fSwing
+        armed := false
+
+// =============================================================================
+// L5 trigger and L7 order state
+// =============================================================================
+inW1 = nyMin >= M_0930 and nyMin <= M_0944 - 1   // a bar closing 09:45 cannot authorise
+inW2 = nyMin >= M_0945 and nyMin <= M_1000 - 2
+inWindow = (fWindow == 1 and inW1) or (fWindow == 2 and inW2)
+
+var bool spent = false                            // the ONE opportunity, spec §9.1
+if nyMin == M_0929 or nyMin == M_0944
+    spent := false
+
+if armed and inWindow and not spent and strategy.position_size == 0 and not orderSubmitted
+    sweeps = bias == 1 ? low < fSwing : high > fSwing
+    if sweeps
+        spent := true                             // used whether or not it qualifies
+        intersects = low <= fZoneHi and high >= fZoneLo
+        reacts = bias == 1
+             ? (intersects and close > fSwing and close > fE)
+             : (intersects and close < fSwing and close < fE)
+        if reacts
+            fStop := bias == 1 ? fE - STOP_PTS : fE + STOP_PTS
+            // Spec §9.2: passive limit at E, submitted on this bar's close.
+            if bias == 1
+                strategy.entry("LB", strategy.long, limit = fE)
+            else
+                strategy.entry("LB", strategy.short, limit = fE)
+            strategy.exit("LBx", from_entry = "LB", stop = fStop, limit = fTarget)
+            orderSubmitted := true                // spec §4: disables window 2
+        else
+            armed := false                        // expired; a later reclaim cannot revive it
+
+// Pending order expiry: 09:45 (w1) / 10:00 (w2).
+expiry = fWindow == 1 ? M_0945 : M_1000
+if nyMin >= expiry and strategy.position_size == 0
+    strategy.cancel("LB")
+    armed := false
+
+// Spec §3: mandatory flatten at 12:00 NY.
+if nyMin >= M_1200
+    strategy.cancel("LB")
+    if strategy.position_size != 0
+        strategy.close("LB", comment = "noon_flat")
+    armed := false
+    dayLive := false
+
+// =============================================================================
+// Diagnostics
+// =============================================================================
+plot(dayLive and not na(fE) ? fE      : na, "E",      color.new(color.blue,   0), 2, plot.style_linebr)
+plot(dayLive and not na(fTarget) ? fTarget : na, "T",  color.new(color.green,  0), 2, plot.style_linebr)
+plot(dayLive and not na(fStop) ? fStop : na, "stop",   color.new(color.red,    0), 2, plot.style_linebr)
+plot(dayLive and not na(fSwing) ? fSwing : na, "swing",color.new(color.orange, 0), 1, plot.style_linebr)
+
+if barstate.islastconfirmedhistory
+    label.new(bar_index, high,
+         str.format("scenario {0}\nplanned loss ${1}\nmin target {2} pts",
+              scenario, str.tostring(plannedLoss, "#.00"), str.tostring(minTargetPts, "#.00")),
+         style = label.style_label_down)
