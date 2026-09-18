@@ -51,6 +51,10 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"bars {len(store)}  {store.first_ts}  ->  {store.last_ts}")
     print(f"eligible sessions: {report['eligible_sessions']}")
+    print("contract windows: " + ", ".join(
+        f"{w['contract']} ({w['from']}..{w['to']})" for w in report["contract_windows"]))
+    if report.get("contract_warning"):
+        print(f"\n!! {report['contract_warning']}\n")
     for name, sc in report["scenarios"].items():
         if "run_invalid" in sc:
             print(f"\n[{name}] RUN INVALID: {sc['run_invalid']}")

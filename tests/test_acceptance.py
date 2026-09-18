@@ -219,3 +219,76 @@ def test_calendar_excludes_holidays_and_early_closes():
     assert not cal.is_eligible_session(date(2026, 9, 7))    # Labor Day
     assert not cal.is_eligible_session(date(2026, 9, 19))   # Saturday
     assert cal.is_eligible_session(date(2026, 9, 15))
+
+
+# --------------------------------------------------------------------------
+# "Contract switch | No comparison with old-contract absolute levels"
+# --------------------------------------------------------------------------
+
+def test_quarterly_roll_dates_match_the_cme_schedule():
+    """Sec 2: "Use CME's published customary roll date for each expiry [3]."
+    Equity-index quarterlies settle on the third Friday; the customary roll is
+    the Thursday eight days earlier."""
+    assert cal.quarterly_expiry(2026, 9) == date(2026, 9, 18)   # third Friday
+    assert cal.quarterly_expiry(2025, 12) == date(2025, 12, 19)
+    assert cal.customary_roll(date(2026, 9, 18)) == date(2026, 9, 10)  # Thursday
+    assert cal.customary_roll(date(2026, 9, 18)).weekday() == 3
+
+
+def test_research_switch_is_the_sunday_before_the_monday_roll():
+    """Sec 2: "The research switch is at 18:00 NY on the Sunday preceding that
+    Monday roll date; all three symbols switch together"."""
+    switch = cal.research_switch(date(2026, 9, 18))
+    assert switch.weekday() == 6            # Sunday
+    assert switch == date(2026, 9, 13)
+
+
+def test_a_range_spanning_a_roll_is_detected():
+    """Sec 2: "Do not splice price levels across contract expiries."
+
+    LB-OPEN's L1 brackets are absolute historical levels from up to 13 weeks
+    back, and a quarterly contract lives about 13 weeks, so a range crossing a
+    switch cannot be one contract's own history.
+    """
+    spanning = cal.contract_windows(date(2026, 8, 21), date(2026, 9, 17))
+    assert [c for c, _a, _b in spanning] == ["M2026", "U2026"]
+    single = cal.contract_windows(date(2026, 8, 21), date(2026, 9, 12))
+    assert [c for c, _a, _b in single] == ["M2026"]
+
+
+# --------------------------------------------------------------------------
+# Sec 2 tick grid: snapping must never flatter a gate
+# --------------------------------------------------------------------------
+
+def test_target_snap_never_moves_away_from_entry():
+    """Sec 2 requires an order price on the tick grid, but rounding to the
+    NEAREST tick can move a target farther from E, and the Sec 5 L6 gate is a
+    lower bound on abs(T-E) — so nearest-rounding can only ever turn a failing
+    gate into a passing one.  The snap must therefore run toward E.
+    """
+    from lb_open.targets import _snap_toward_entry
+
+    # Long: target sits above E, so it snaps DOWN (closer to E).
+    assert _snap_toward_entry(19994.20, 19930.0, Direction.LONG) == 19994.00
+    # Short: target sits below E, so it snaps UP (closer to E).
+    assert _snap_toward_entry(19865.80, 19930.0, Direction.SHORT) == 19866.00
+    # A level already on the grid is untouched, as Sec 2 assumes the feed to be.
+    assert _snap_toward_entry(20020.00, 19930.0, Direction.LONG) == 20020.00
+    assert _snap_toward_entry(19840.00, 19930.0, Direction.SHORT) == 19840.00
+
+
+def test_off_grid_target_cannot_round_its_way_through_the_gate():
+    """An observed swing 64.20 points away fails the 64.25-point baseline gate;
+    it must not be admitted by rounding the observation outward to 64.25."""
+    from datetime import datetime, timezone
+
+    from lb_open.swings import Swing
+    from lb_open.targets import choose_target
+
+    t = datetime(2026, 9, 15, 13, 0, tzinfo=timezone.utc)
+    off_grid = [Swing(kind="high", level=19994.20, mid_ts=t, confirmed_at=t)]
+    assert choose_target(off_grid, [], 19930.0, Direction.LONG, BASELINE) is None
+
+    on_grid = [Swing(kind="high", level=20020.0, mid_ts=t, confirmed_at=t)]
+    chosen = choose_target(on_grid, [], 19930.0, Direction.LONG, BASELINE)
+    assert chosen is not None and chosen.target == 20020.0

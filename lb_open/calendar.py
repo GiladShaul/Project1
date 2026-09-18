@@ -128,3 +128,59 @@ def previous_session(d: date) -> date:
     while not is_eligible_session(p):
         p -= timedelta(days=1)
     return p
+
+
+# ---------------------------------------------------------------------------
+# Contract identity (Sec 2, "Contract identity")
+# ---------------------------------------------------------------------------
+
+QUARTERLY_MONTHS = (3, 6, 9, 12)
+MONTH_CODE = {3: "H", 6: "M", 9: "U", 12: "Z"}
+
+
+def quarterly_expiry(year: int, month: int) -> date:
+    """Final settlement date of a CME equity-index quarterly: the third Friday."""
+    if month not in QUARTERLY_MONTHS:
+        raise ValueError(f"{month} is not a quarterly month {QUARTERLY_MONTHS}")
+    return _nth_weekday(year, month, 4, 3)
+
+
+def customary_roll(expiry: date) -> date:
+    """CME's customary roll date: the Thursday preceding the third Friday [3]."""
+    return expiry - timedelta(days=8)
+
+
+def research_switch(expiry: date) -> date:
+    """Sec 2: "The research switch is at 18:00 NY on the Sunday preceding that
+    Monday roll date; all three symbols switch together."
+
+    The date returned is that Sunday; the switch instant is 18:00 NY on it.
+    """
+    roll = customary_roll(expiry)
+    monday = roll + timedelta(days=(0 - roll.weekday()) % 7)
+    return monday - timedelta(days=1)
+
+
+def contract_windows(start: date, end: date) -> list[tuple[str, date, date]]:
+    """The dated contracts a `[start, end]` range falls across.
+
+    Returns (ticker_suffix, window_start, window_end) per contract, where the
+    window boundaries are the Sec 2 research switches.  Used to enforce Sec 2:
+    "Do not splice price levels across contract expiries or use retrospectively
+    back-adjusted continuous prices for absolute historical levels."
+    """
+    switches: list[tuple[date, str]] = []
+    for year in range(start.year - 1, end.year + 2):
+        for month in QUARTERLY_MONTHS:
+            exp = quarterly_expiry(year, month)
+            switches.append((research_switch(exp), f"{MONTH_CODE[month]}{year}"))
+    switches.sort()
+
+    windows: list[tuple[str, date, date]] = []
+    for i, (switch, code) in enumerate(switches):
+        w_start = switch
+        w_end = switches[i + 1][0] - timedelta(days=1) if i + 1 < len(switches) else end
+        if w_end < start or w_start > end:
+            continue
+        windows.append((code, max(w_start, start), min(w_end, end)))
+    return windows

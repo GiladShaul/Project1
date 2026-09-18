@@ -15,8 +15,10 @@ Two Sec 7 sentences shape everything here:
   result on a sample below the Sec 7 floor is reported INCONCLUSIVE - never
   PASS.  See `_verdict`.
 * "Do not describe a nominal entry-price exit as a net win."  `classify_exit`
-  buckets an exit at the nominal entry price separately from target/stop/time
-  exits, and such a trade is never counted as a winner.
+  buckets a protective stop that filled at the nominal entry price separately
+  from target/stop/time exits, and such a trade is never counted as a winner.
+  The mandatory 12:00 flatten stays a time exit even when it prints at `E`,
+  because Sec 7 requires those two frequencies separately.
 """
 
 from __future__ import annotations
@@ -145,6 +147,43 @@ def _month_key(d: date) -> str:
     return f"{d.year:04d}-{d.month:02d}"
 
 
+def _month_index(d: date) -> int:
+    """Months since year 0, so that consecutive calendar months differ by one."""
+    return d.year * 12 + (d.month - 1)
+
+
+def _month_span(dates: Iterable[date]) -> dict:
+    """Sec 7: "at least 36 **consecutive** calendar months of suitable data".
+
+    Counting distinct month keys is a different, weaker claim: a series with a
+    hole in it can hold 36 months of data across a far longer interrupted span,
+    and reporting that as the registered history is exactly what Sec 7 forbids
+    ("If unavailable, report the actual shorter span; do not claim the planned
+    validation was performed").  This returns the longest uninterrupted run of
+    calendar months together with the elapsed span and the number of months
+    inside that span with no eligible session.
+    """
+    idx = sorted({_month_index(d) for d in dates})
+    if not idx:
+        return {
+            "months_with_sessions": 0,
+            "longest_consecutive_months": 0,
+            "elapsed_months": 0,
+            "months_without_sessions": 0,
+        }
+    longest = run = 1
+    for a, b in zip(idx, idx[1:]):
+        run = run + 1 if b == a + 1 else 1
+        longest = max(longest, run)
+    elapsed = idx[-1] - idx[0] + 1
+    return {
+        "months_with_sessions": len(idx),
+        "longest_consecutive_months": longest,
+        "elapsed_months": elapsed,
+        "months_without_sessions": elapsed - len(idx),
+    }
+
+
 def _m(x: float) -> float:
     """Round money for the published report (P&L lives on half-dollar ticks)."""
     return round(float(x) + 0.0, 2)
@@ -228,22 +267,35 @@ def split_sessions(dates: Iterable[Any]) -> tuple[list[date], list[date], list[d
 def classify_exit(trade: Any) -> str:
     """Bucket one closed trade's exit.
 
-    Sec 7: "Do not describe a nominal entry-price exit as a net win."  An exit
-    filled at the nominal entry price is therefore its own bucket whatever the
-    order that produced it was called; Sec 8.4 lesson 4: "'Break-even' is gross,
-    not net."  LB-OPEN has no break-even amendment (Sec 5 L6), so for this
-    candidate the buckets reduce to target / stop / noon_flat - the classifier
-    stays general for the other candidates in the same ledger.
+    Sec 7: "Do not describe a nominal entry-price exit as a net win."  A
+    protective stop filled at the nominal entry price - Sec 4 Q5's amended
+    break-even stop - is therefore its own bucket whatever that order was called;
+    Sec 8.4 lesson 4: "'Break-even' is gross, not net."  Sec 7 also asks for
+    "time-exit frequencies" separately, so the Sec 3 mandatory 12:00 flatten
+    keeps its own bucket even on the rare minute where it fills at `E`.  LB-OPEN
+    has no break-even amendment (Sec 5 L6), so for this candidate the buckets
+    reduce to target / stop / noon_flat - the classifier stays general for the
+    other candidates in the same ledger.
     """
-    entry = _get(trade, "entry", "entry_price")
-    exit_price = _get(trade, "exit", "exit_price")
-    if entry is not None and exit_price is not None and float(entry) == float(exit_price):
-        return "entry_price"
     raw = _get(trade, "exit_reason", "reason", default="")
     raw = str(raw or "").strip().lower()
-    if not raw:
-        return "unknown"
-    return _EXIT_ALIASES.get(raw, raw)
+    bucket = _EXIT_ALIASES.get(raw, raw) if raw else "unknown"
+    entry = _get(trade, "entry", "entry_price")
+    exit_price = _get(trade, "exit", "exit_price")
+    at_entry = (
+        entry is not None
+        and exit_price is not None
+        and float(entry) == float(exit_price)
+    )
+    # Sec 4 Q5: the amended "entry-price stop is gross break even"; Sec 8.4
+    # lesson 4 names that exit.  A protective stop (or an unlabelled exit) that
+    # filled at the nominal entry price is that exit.  The 12:00 flatten is not:
+    # Sec 7 requires "win/loss/entry-price/time-exit frequencies" separately, so
+    # a mandatory time exit that happens to print at `E` stays a time exit and is
+    # reported at its actual net result (a loss once fees are deducted).
+    if at_entry and bucket in ("stop", "entry_price", "unknown"):
+        return "entry_price"
+    return bucket
 
 
 def _outcome(trade: Any) -> str:
@@ -314,6 +366,17 @@ def _label(v: Any) -> Any:
     if isinstance(v, (datetime, date)):
         return v.isoformat()
     return v
+
+
+def _money_outcomes(nets: Sequence[float]) -> list[str]:
+    """Win/loss/flat on net money alone, for the Sec 7 streak counts.
+
+    Sec 8.4 lesson 4: "'Break-even' is gross, not net.  ...  A futures entry-price
+    stop lost $3 baseline and $7 stress."  Such a trade is reported in its own
+    frequency bucket and is never a win (Sec 7), but it is money lost, so it does
+    not interrupt a run of "consecutive losses".
+    """
+    return ["win" if n > 0 else "loss" if n < 0 else "flat" for n in nets]
 
 
 def _streaks(outcomes: Sequence[str]) -> tuple[int, int]:
@@ -468,7 +531,7 @@ def summarize(
     }
 
     ambiguous = [t for t in ordered if bool(_get(t, "ambiguous", default=False))]
-    longest_loss_streak, longest_win_streak = _streaks(outcomes)
+    longest_loss_streak, longest_win_streak = _streaks(_money_outcomes(nets))
     net_total = sum(nets)
     daily_total = sum(daily_nets)
 
@@ -482,7 +545,9 @@ def summarize(
         "sessions_with_trades": len(traded_dates),
         "zero_trade_sessions": sessions - len(traded_dates & set(known_dates)),
         "calendar_months": len(months),
-        "first_session": known_dates[0].isoformat() if known_dates else None,
+        # Sec 6 requires the record's actual date range; the caller's row order
+        # is not evidence of chronology (`last_session` already uses `max`).
+        "first_session": min(known_dates).isoformat() if known_dates else None,
         "last_session": max(known_dates).isoformat() if known_dates else None,
         # outcome frequencies (Sec 7: entry-price exits are not net wins)
         "winners": len(wins),
@@ -542,6 +607,15 @@ def summarize(
         },
         "no_trade_reasons": dict(reasons.most_common()),
         "data_quality_exclusions": len(data_quality_exclusions or []),
+        # Sec 7: "Also report the result after identifiable incremental fixed
+        # operating expenses; missing expenses prevent an all-in profit claim."
+        # Sec 3: "without those inputs, all-in profitability remains unknown."
+        "operating_expenses": None,
+        "net_after_operating_expenses": None,
+        "all_in_profitability": (
+            "unknown - no identifiable incremental platform/data operating expenses "
+            "were supplied (Sec 3, Sec 7)"
+        ),
         "by_month": by_month,
         "by_direction": by_direction,
         "notes": [
@@ -551,6 +625,11 @@ def summarize(
             "is not derivable from closed trades; it is reported as unavailable.",
             "Sec 3: exposure is measured against the 09:30-12:00 window "
             f"({SESSION_EXPOSURE_MINUTES} minutes per eligible session).",
+            "Sec 7: net results are after declared trading costs only; no "
+            "incremental fixed operating expenses were supplied, so no all-in "
+            "profitability claim can be made.",
+            "Sec 7: the streak counts run on net money, so a gross break-even "
+            "exit does not interrupt a run of consecutive losses.",
         ],
     }
 
@@ -841,24 +920,35 @@ def evaluate_gates(
     )
 
     # --- Sec 7: registered span (informational hurdle) -------------------
+    # Sec 7: "at least 36 CONSECUTIVE calendar months of suitable data".  The
+    # hurdle is the longest uninterrupted run, not the count of months that
+    # happen to contain a session: a gapped series with 36 populated months
+    # spread over a decade has not supplied the registered history.
+    span = _month_span(daily_by_date)
+    span_met = span["longest_consecutive_months"] >= REGISTERED_SPAN_MONTHS
     gates["registered_history_span"] = GateResult(
         "registered_history_span",
         # Sec 2: "A continuous-chart run may be an exploratory screen only,
         # labeled as such" - such a span is not the registered history either.
-        PASS if len(all_months) >= REGISTERED_SPAN_MONTHS and not exploratory
-        else INCONCLUSIVE,
+        PASS if span_met and not exploratory else INCONCLUSIVE,
         (
-            f"{len(all_months)}/{REGISTERED_SPAN_MONTHS} calendar months of eligible "
-            "sessions"
+            f"{span['longest_consecutive_months']}/{REGISTERED_SPAN_MONTHS} consecutive "
+            f"calendar months of eligible sessions "
+            f"({span['months_with_sessions']} months with sessions over an elapsed "
+            f"{span['elapsed_months']}-month span, "
+            f"{span['months_without_sessions']} with none)"
             + (
                 ""
-                if len(all_months) >= REGISTERED_SPAN_MONTHS
+                if span_met
                 else " - Sec 7: report the actual shorter span; do not claim the "
                 "planned validation was performed"
             )
             + (" - exploratory screen, not the registered history" if exploratory else "")
         ),
-        {"calendar_months": len(all_months), "required": REGISTERED_SPAN_MONTHS,
+        {"consecutive_calendar_months": span["longest_consecutive_months"],
+         "calendar_months": len(all_months), "required": REGISTERED_SPAN_MONTHS,
+         "elapsed_months": span["elapsed_months"],
+         "months_without_sessions": span["months_without_sessions"],
          "development_sessions": len(dev), "validation_sessions": len(val),
          "holdout_sessions": len(hold)},
     )
@@ -911,18 +1001,70 @@ def evaluate_gates(
 
     # --- Sec 7: moving-block bootstrap lower bounds ----------------------
     boots = _normalise_bootstraps(bootstraps)
+    supplied = bool(boots)
     if not boots:
         # Sec 7 runs the bootstrap "over all eligible daily results", i.e. the
         # full eligible series supplied here, zero-trade days included.
         boots = bootstrap_lower_bounds([_daily_net(d) for d in daily])
-    bounds = {k: (boots.get(k) or {}).get("lower_bound") for k in ("L5", "L10")}
+    records = {k: (boots.get(k) or {}) for k in ("L5", "L10")}
+    bounds = {k: records[k].get("lower_bound") for k in ("L5", "L10")}
     boot_computable = all(v is not None for v in bounds.values())
-    boot_ok = boot_computable and all(v > 0 for v in bounds.values())
+
+    # Sec 7 names the procedure exactly - "Use seed 20260917", "For each of
+    # 10,000 resamples", "take element 500 in one-based order", "Run separately
+    # for L=5 and L=10" - and Sec 6 requires the audit record to describe the
+    # calculation that actually ran (Sec 8.5: "Record source IDs from the actual
+    # calculation, not marketing labels").  A bound handed in by a caller is
+    # therefore echoed as it was computed, and a run that departs from the
+    # preregistered procedure, or from the eligible series in hand, cannot
+    # settle this gate either way.
+    expected_params = {
+        "L5": (BOOTSTRAP_SEED, BOOTSTRAP_RESAMPLES, BOOTSTRAP_ELEMENT_ONE_BASED, 5),
+        "L10": (BOOTSTRAP_SEED, BOOTSTRAP_RESAMPLES, BOOTSTRAP_ELEMENT_ONE_BASED, 10),
+    }
+    actual_params = {
+        k: {
+            "seed": records[k].get("seed"),
+            "resamples": records[k].get("resamples"),
+            "element_one_based": records[k].get("element_one_based"),
+            "block_length": records[k].get("block_length"),
+            "n_sessions": records[k].get("n_sessions"),
+            "rng": records[k].get("rng"),
+            "numpy_version": records[k].get("numpy_version"),
+        }
+        for k in ("L5", "L10")
+    }
+    departures = [
+        f"{k}: {field}={actual_params[k][field]!r}, Sec 7 requires {want!r}"
+        for k in ("L5", "L10")
+        for field, want in zip(
+            ("seed", "resamples", "element_one_based", "block_length"),
+            expected_params[k],
+        )
+        if actual_params[k][field] != want
+    ]
+    departures += [
+        f"{k}: bootstrap ran over {actual_params[k]['n_sessions']} daily results, "
+        f"{len(daily)} eligible sessions were supplied"
+        for k in ("L5", "L10")
+        if actual_params[k]["n_sessions"] not in (None, len(daily))
+    ]
+    conforming = not departures
+    boot_ok = boot_computable and conforming and all(v > 0 for v in bounds.values())
     boot_observed: dict[str, Any] = {
         "lower_bounds": bounds,
-        "seed": BOOTSTRAP_SEED,
-        "resamples": BOOTSTRAP_RESAMPLES,
-        "element_one_based": BOOTSTRAP_ELEMENT_ONE_BASED,
+        # Sec 7: "record the random-number generator/library version" - of the
+        # run that produced these bounds, not of the preregistered constants.
+        "parameters": actual_params,
+        "preregistered": {
+            "seed": BOOTSTRAP_SEED,
+            "resamples": BOOTSTRAP_RESAMPLES,
+            "element_one_based": BOOTSTRAP_ELEMENT_ONE_BASED,
+            "block_lengths": list(BOOTSTRAP_BLOCK_LENGTHS),
+        },
+        "conforms_to_preregistered_procedure": conforming,
+        "departures": departures,
+        "bounds_supplied_by_caller": supplied,
         "series": "all eligible daily results, including zero-trade days",
         "n_sessions": len(daily),
     }
@@ -935,12 +1077,17 @@ def evaluate_gates(
         }
     gates["bootstrap_lower_bounds"] = _verdict(
         "bootstrap_lower_bounds",
-        computable=boot_computable,
+        computable=boot_computable and conforming,
         satisfied=boot_ok,
         # The gate compares the full-precision bounds; only the printed line rounds.
         detail=(
             f"L=5 lower bound {_r(bounds['L5'], 6)}, "
             f"L=10 lower bound {_r(bounds['L10'], 6)} (both required > 0)"
+            + (
+                ""
+                if conforming
+                else " - not the Sec 7 preregistered bootstrap: " + "; ".join(departures)
+            )
         ),
         observed=boot_observed,
         evidence_adequate=adequate,

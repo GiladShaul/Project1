@@ -92,6 +92,17 @@ def run_experiment(
     from .report import split_sessions, summarize, bootstrap_lower_bound, evaluate_gates
 
     sessions = cal.eligible_sessions(start, end)
+
+    # Sec 2: "Use dated, unadjusted contracts. ... Do not splice price levels
+    # across contract expiries or use retrospectively back-adjusted continuous
+    # prices for absolute historical levels."  LB-OPEN's L1 brackets ARE
+    # absolute historical levels drawn from up to 13 weeks back, and a quarterly
+    # contract lives about 13 weeks, so a range that crosses a research switch
+    # cannot be one contract's own history.  Sec 2: "Reset quarter and order
+    # state on a contract switch."
+    windows = cal.contract_windows(start, end)
+    spans_roll = len(windows) > 1
+
     out: dict = {
         "strategy": "LB-OPEN",
         "rulebook": "Strategy_Rulebook_v1.md",
@@ -99,13 +110,28 @@ def run_experiment(
         "exploratory": exploratory,
         "range": [start.isoformat(), end.isoformat()],
         "eligible_sessions": len(sessions),
+        "contract_windows": [
+            {"contract": c, "from": a.isoformat(), "to": b.isoformat()} for c, a, b in windows
+        ],
+        "spans_contract_roll": spans_roll,
         "scenarios": {},
     }
-    if exploratory:
+    if spans_roll:
+        out["contract_warning"] = (
+            f"Range crosses {len(windows) - 1} Sec 2 research switch(es): "
+            + " -> ".join(c for c, _a, _b in windows)
+            + ". A single CSV covering this range cannot be one dated contract's own "
+            "history, so L1's absolute bracket levels are spliced across expiries, "
+            "which Sec 2 forbids. Run one contract per invocation."
+        )
+    if exploratory or spans_roll:
+        out["exploratory"] = True
         out["evidentiary_status"] = (
             "EXPLORATORY SCREEN - not acceptance evidence under Sec 7. "
             "Sec 7: 'A lack of adequate history is inconclusive, not a pass.'"
+            + (" Range spans a contract roll (Sec 2)." if spans_roll else "")
         )
+        exploratory = True
 
     for cost in scenarios:
         try:
@@ -137,7 +163,12 @@ def run_experiment(
             "summary": summary,
             "bootstrap": boot,
             "split": {"development": len(dev), "validation": len(val), "holdout": len(hold)},
-            "gates": evaluate_gates(trades, daily, summary, boot, exploratory=exploratory),
+            # Sec 7's stress gate judges the declared stress rerun; naming the
+            # active scenario lets it read that run's own holdout instead of
+            # reporting "not supplied" for a rerun that did happen.
+            "gates": evaluate_gates(trades, daily, summary, boot,
+                                    exploratory=exploratory,
+                                    scenario_name=cost.name),
             "audit": audit_rows(results, cost, source),
         }
     return out

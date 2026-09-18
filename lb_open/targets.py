@@ -24,11 +24,13 @@ the caller already froze at `S`; the only price reads here are in
 
 from __future__ import annotations
 
+import math
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Sequence
 
-from .core import CostScenario, Direction, round_to_tick
+from .core import TICK, CostScenario, Direction, round_to_tick
 from .data import MinuteStore
 from .swings import Swing
 
@@ -57,11 +59,32 @@ class TargetChoice:
 def _profitable(price: float, entry: float, direction: Direction) -> bool:
     """Sec 5 L6: "retain only prices strictly in the profitable direction from `E`".
 
-    Sec 2: "Strict comparisons mean strict" - a target at `E` is not a target.
+    Sec 5 L2: "Equality does not satisfy a strict take/break condition" - a
+    price at `E` is not strictly in the profitable direction, so it is not a
+    target.
     """
     if direction is Direction.LONG:
         return price > entry
     return price < entry
+
+
+def _snap_toward_entry(level: float, entry: float, direction: Direction) -> float:
+    """Put a target level on the tick grid without ever moving it away from `E`.
+
+    Sec 2 requires an order price to "conform to the instrument's tick grid", and
+    the frozen `T` becomes a resting limit, so it must be snapped.  But the
+    direction of the snap is not neutral: rounding to the NEAREST tick can move a
+    level farther from `E`, and because the Sec 5 L6 gate is a lower bound on
+    `abs(T-E)`, that can only ever turn a failing gate into a passing one - never
+    the reverse.  Snapping toward `E` is the conservative choice, so an off-grid
+    observation can never flatter the gate.
+
+    On a feed that already conforms to the grid, as Sec 2 assumes, this is the
+    identity; it only bites on an export whose extremes sit between ticks.
+    """
+    ticks = level / TICK
+    snapped = (math.floor(ticks) if direction is Direction.LONG else math.ceil(ticks)) * TICK
+    return round(snapped, 10)
 
 
 def _labelled_prices(
@@ -95,14 +118,16 @@ def _labelled_prices(
     for swing in swings:
         if swing.is_high != want_high:
             continue  # Sec 5 L6.1: highs for Long, lows for Short.
-        level = round_to_tick(swing.level)
+        # Sec 5 L6 measures abs(T-E) from the OBSERVED extreme; the snap below
+        # only puts the resting order on the grid, and never outward.
+        level = _snap_toward_entry(swing.level, e, direction)
         if level in seen or not _profitable(level, e, direction):
             continue
         seen.add(level)
         prices.append((level, SOURCE_SWING))
 
     for boundary in other_boundaries:
-        level = round_to_tick(boundary)
+        level = _snap_toward_entry(boundary, e, direction)
         if level in seen or not _profitable(level, e, direction):
             continue
         seen.add(level)

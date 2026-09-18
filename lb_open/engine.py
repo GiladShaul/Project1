@@ -158,6 +158,19 @@ def select_setup(
 
     # Sec 5 L5 swing history: "search confirmed swings formed since previous day 18:00".
     swing_start = ny_datetime(session_date - timedelta(days=1), time(18, 0))
+    # Sec 2: "A missing interval before order submission expires that window,
+    # because it may conceal the first sweep or a target touch."  The same
+    # reasoning binds the swing history: an absent minute there can conceal the
+    # cross that would have CONSUMED a swing, and `unconsumed_swings` cannot
+    # distinguish "nothing crossed it" from "the minutes that would have are
+    # missing".  A stale swing would then be offered to the L5 liquidity choice
+    # and to L6's target set.
+    #
+    # On the run_session path this is already implied by L4 requiring
+    # [prev 18:00, 09:29) complete and by the Sec 2 execution inventory covering
+    # [09:29, 12:00]; it is asserted here anyway so the invariant is local to the
+    # code that depends on it rather than emergent from two unrelated checks.
+    store.require_complete(swing_start, snapshot, "L5/L6 swing history")
     swings = unconsumed_swings(store, swing_start, snapshot, snapshot)
 
     for cand in candidates:

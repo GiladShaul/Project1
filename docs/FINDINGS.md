@@ -164,7 +164,61 @@ None of these caveats plausibly closes a 20× gap.
 
 ---
 
-## 4. What follows
+## 4. Adversarial review outcome
+
+Each module was reviewed clause-by-clause against §5 and §2 by a reviewer that
+re-derived the rules from the rulebook rather than from the implementation, and
+that was required to reproduce every claim by executing code. **18 findings; 13
+fixed, one of them critical.** The three that changed behaviour are described in
+the commit history; the L6 source-set fix changed a reported number and §3 above
+carries the corrected figures.
+
+Five findings were left unfixed. Three have since been addressed and two are
+accepted as-is, with reasons:
+
+**Addressed after review.**
+
+- *Swing history could hide a consumption.* `is_consumed` cannot tell "nothing
+  crossed this level" from "the minutes that would have are absent", so a data
+  gap could hand a stale swing to L5 and L6. The engine now requires the
+  swing-search interval to be complete. On the `run_session` path this was
+  already implied by L4's window plus the §2 execution inventory; it is asserted
+  locally so the invariant cannot be lost to a refactor of either.
+- *Rounding could flatter the L6 gate.* Target levels were snapped to the
+  **nearest** tick. Because the gate is a lower bound on `abs(T−E)`, nearest-
+  rounding can only ever turn a failing gate into a passing one. Levels now snap
+  **toward E**, so an off-grid observation can never buy its way through. An
+  observed swing 64.20 points out now fails the 64.25-point baseline gate instead
+  of being admitted as 64.25.
+- *Contract identity was not modelled at all.* §5 L1 requires "the currently
+  traded dated contract" and §2 forbids splicing levels across expiries, but
+  nothing in the package knew what a contract was; `--dated` only relabelled the
+  report. The calendar now models quarterly expiries, CME's customary roll and
+  §2's Sunday-18:00 research switch, and a study whose range crosses a switch is
+  reported with its contract windows, warned about, and forced to exploratory
+  regardless of `--dated`. This one is not hypothetical: the screen in §2 above
+  spans the M2026→U2026 switch on 2026-09-13, which is a further reason it
+  carries no evidentiary weight.
+
+**Accepted as-is.**
+
+- `regular_session_daily` defaults `as_of` to the session's own 16:00 close, so a
+  direct call for *today* would return a candle that does not exist at the 09:29
+  decision instant. The reviewer confirmed this is unreachable through
+  `lookback_daily_candidates`, which always forwards the snapshot. It is a
+  footgun in a module that advertises explicit `as_of` discipline, not a live
+  causality leak.
+- §7 says *"Publish the resample-start indices for exact reproduction"*, and the
+  report stores a SHA-256 digest, the first resample's row and the exact
+  generator call rather than the full array — 10,000 × 149 indices at 744
+  sessions. The digest plus `np.random.default_rng(20260917).integers(...)` with
+  the NumPy version recorded regenerates the identical array bit-for-bit, which
+  is the clause's stated purpose, without putting ~10 MB of integers in every
+  audit record. Recorded here as a deliberate departure rather than left silent.
+
+---
+
+## 5. What follows
 
 Under §7, *"If the primary candidate fails the evidence gates, the conclusion is
 rejection or insufficient evidence — not automatic parameter optimization until a
