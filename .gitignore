@@ -1,4 +1,6 @@
 __pycache__/
 *.pyc
+
+# Working artifacts.  The preserved screen under reports/exploratory_screen_*/
+# is tracked deliberately: Sec 6 requires the audit record to be kept.
 reports/*.json
-data/*.csv
