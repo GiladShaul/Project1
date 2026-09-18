@@ -129,8 +129,14 @@ def available_candles(
         start = candidate_start(anchor_ny, name)
         if start is None:
             continue  # DST-invalid local start (Sec 5 L3)
-        # 30 minutes of trade data measured in absolute time: minute records, not
-        # wall-clock labels, are what is aggregated (Sec 2).
+        # Sec 5 L3: "The interval is `[start,start+30 minutes)`".  Adding a
+        # timedelta to a zone-aware datetime is WALL-CLOCK arithmetic in Python,
+        # which is the L3 reading ("Use local wall-clock date/time subtraction");
+        # across a fall-back hour it would span 90 real minutes, and the
+        # exactly-30-records requirement below then drops such an interval
+        # (Sec 2: complete minute records).  The L3 offsets never place a start
+        # inside a clock change from a 09:30/09:45 anchor, so the two readings
+        # cannot diverge here.
         end = start + CANDLE
         if end > snapshot:
             continue  # Sec 5 L3: not "entirely completed by S"
@@ -183,6 +189,14 @@ def build_candidates(
             entry = zone_low
             if not entry > p:
                 continue
+        # Sec 5 L3: "Zero-width wick zones are ineligible."  The rule is about the
+        # zone that is actually frozen, so it is re-tested on the tick-grid edges
+        # (Sec 2: "Prices and orders must conform to the instrument's tick grid").
+        # On conforming data this is the same verdict as the raw test above; on a
+        # feed whose extreme sits off the grid it stops a collapsed zone from
+        # being frozen as if it had width.
+        if zone_low == zone_high:
+            continue
         candidates.append(
             LBCandidate(
                 offset=name,
@@ -202,23 +216,44 @@ def build_candidates(
 
 
 def other_candle_boundaries(
-    candidates: Sequence[LBCandidate],
+    candles: Sequence[tuple[str, OHLC]] | Sequence[LBCandidate],
     chosen: LBCandidate,
 ) -> list[float]:
     """Target source 2 of Sec 5 L6, for the candidate currently being evaluated.
 
     Sec 5 L6: "High and low boundaries of the other available historical LB
-    candles for this window."  Candidates are identified by offset, which is
-    unique within a window.  Prices are returned on the tick grid and
-    deduplicated in rank order; Sec 5 L6's own "Deduplicate tick prices" then
-    merges them with the swing-based target candidates.
+    candles for this window."  The source set is the AVAILABLE candle set of
+    `available_candles`, not the entry-eligible subset returned by
+    `build_candidates`.  "Available" is the rulebook's data word throughout -
+    Sec 5 L3 "the required trading interval is unavailable, remove that
+    candidate", Sec 2 "An exchange-closed interval is unavailable", Sec 6
+    "Missing Sunday 24h candidate on Monday | Candidate unavailable" - so a
+    candle whose interval was complete is an available LB candle even when its
+    own zone cannot be traded (zero-width wick, or `E<P`/`E>P` failing).  Those
+    are exactly the candles carrying the structure in front of the trade: for a
+    Long every entry-eligible candle has `E=high<P`, so restricting this source
+    to them would discard all overhead boundaries and push the target farther
+    away - the jump Sec 5 L6 forbids ("choose the **nearest**.  Do not jump
+    over a nearer target to advertise a better reward/risk ratio").
+
+    Candles are identified by offset, which is unique within a window, so the
+    candle being evaluated is excluded by name.  Prices are returned on the tick
+    grid and deduplicated in offset order; Sec 5 L6's own "Deduplicate tick
+    prices" then merges them with the swing-based target candidates.
+
+    A sequence of `LBCandidate` is still accepted for backwards compatibility,
+    but callers with the store in hand must pass `available_candles(...)`.
     """
     levels: list[float] = []
     seen: set[float] = set()
-    for c in candidates:
-        if c.offset == chosen.offset:
+    for item in candles:
+        if isinstance(item, LBCandidate):
+            offset, candle = item.offset, item.candle
+        else:
+            offset, candle = item
+        if offset == chosen.offset:
             continue
-        for level in (round_to_tick(c.candle.high), round_to_tick(c.candle.low)):
+        for level in (round_to_tick(candle.high), round_to_tick(candle.low)):
             if level not in seen:
                 seen.add(level)
                 levels.append(level)

@@ -102,20 +102,34 @@ agreement with an already-fixed daily bias is about half of those, so **~34%** o
 L1 survivors clear L2.
 
 **§5 L6 reward/risk gate.** Across 126 candidate evaluations with the
-completeness veto bypassed, the nearest target sits a median of 42.75 points from
-E, giving a median reward/risk of 1.32 against a required 2.00. **30 of 103
-scored evaluations (~29%) clear the gate**; 73 are rejected by it.
+completeness veto bypassed, the nearest target sits a median of **31.75 points**
+from E, giving a median reward/risk of **0.97** against a required 2.00. **24 of
+103 scored evaluations (~23%) clear the gate**; 79 are rejected by it. A median
+reward/risk below 1.0 means the typical candidate's nearest structural target is
+worth less than the trade's own planned risk.
 
-An earlier, cruder version of this measurement looked only at swing targets from
-the 09:29 price and suggested the gate was almost never satisfiable. That was
-wrong: including the other LB candles' boundaries, which §L6 also admits, supplies
-targets much farther out. The gate is restrictive, not prohibitive.
+This measurement was revised twice, and both revisions are recorded because they
+moved the number in opposite directions:
+
+- A first, cruder version looked only at swing targets from the 09:29 price and
+  suggested the gate was almost never satisfiable. That was **wrong**: §L6 also
+  admits the other LB candles' boundaries, which supply targets much farther out.
+- An adversarial review then found the implementation was drawing source 2 from
+  the *entry-eligible* candidates rather than the *available* ones. §L6 says
+  "the other **available** historical LB candles". The distinction bites: for a
+  Long, every entry-eligible candle satisfies `E = high < P`, so all of their
+  boundaries lie below the market and restricting the source to them discards
+  every overhead boundary — pushing the chosen target farther away, which is the
+  jump §L6 forbids. Correcting it moved the pass rate from 29% to **23%** and the
+  median nearest-target distance from 42.75 to **31.75 points**.
+
+The gate is restrictive, not prohibitive.
 
 ### What this compounds to
 
 L1 (~31%) × L2 (~34%) ≈ **~11% of sessions** reach candidate selection at all.
 L4's location gate, L5's requirement that the first sweeping candle also close
-beyond E inside a 15-minute window, and L6's ~29% pass rate all apply after that.
+beyond E inside a 15-minute window, and L6's ~23% pass rate all apply after that.
 A trade rate of roughly **2–3% of sessions** is the realistic expectation.
 
 Set that against §7:

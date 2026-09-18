@@ -37,7 +37,12 @@ from .execution import (
     resolve_open_position,
     trade_pnl,
 )
-from .lookback import LBCandidate, build_candidates, other_candle_boundaries
+from .lookback import (
+    LBCandidate,
+    available_candles,
+    build_candidates,
+    other_candle_boundaries,
+)
 from .swings import Swing, nearest_swing_high_above, nearest_swing_low_below, unconsumed_swings
 from .targets import TargetChoice, choose_target, target_touched
 
@@ -146,6 +151,10 @@ def select_setup(
     p = last.close
 
     candidates = build_candidates(store, anchor, snapshot, direction, p)
+    # Sec 5 L6 source 2 is "the other AVAILABLE historical LB candles for this
+    # window", which is the complete-by-`S` candle set, not the entry-eligible
+    # subset that survives the L3 zone rules.
+    avail = available_candles(store, anchor, snapshot)
 
     # Sec 5 L5 swing history: "search confirmed swings formed since previous day 18:00".
     swing_start = ny_datetime(session_date - timedelta(days=1), time(18, 0))
@@ -174,7 +183,7 @@ def select_setup(
             continue
 
         # Gate 3 - structural target and reward/risk (Sec 5 L6).
-        others = other_candle_boundaries(candidates, cand)
+        others = other_candle_boundaries(avail, cand)
         directional = [s for s in swings if s.kind == ("high" if direction is Direction.LONG else "low")]
         target = choose_target(directional, others, cand.entry, direction, cost)
         if target is None:

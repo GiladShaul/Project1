@@ -263,12 +263,19 @@ def bracket_touches(
     level at 09:29 and examining earlier observations is causal because all
     inputs already exist."  The window is mandatory context: an absent minute
     could conceal a touch and flip the classification, so it is required
-    complete rather than scanned as-is.
+    complete rather than scanned as-is.  The observed interval is fixed by the
+    09:29 clock; `as_of` only bounds availability (Sec 2).
     """
     if as_of is None:
         as_of = snapshot_at(session_date, SNAPSHOT_1)
     start = ny_datetime(session_date, LONDON_START)
-    bars = _require_bars(store, start, as_of, as_of, "L1 touch window [00:00,09:29)")
+    # The window end is the fixed 09:29 clock of Sec 5 L1, never `as_of`: Sec 5
+    # L3 keeps the daily context frozen when the second window refreshes at
+    # 09:44, and a later `as_of` must not widen what was observed.  `as_of`
+    # remains only the Sec 2 availability cutoff, so a call before 09:29 cannot
+    # complete the window and raises rather than returning a partial verdict.
+    end = snapshot_at(session_date, SNAPSHOT_1)
+    bars = _require_bars(store, start, end, as_of, "L1 touch window [00:00,09:29)")
     touched_low = any(b.covers(b_low) for b in bars)
     touched_high = any(b.covers(b_high) for b in bars)
     return touched_low, touched_high
@@ -331,7 +338,11 @@ def overnight_range(
     """
     if as_of is None:
         as_of = snapshot_at(session_date, SNAPSHOT_1)
-    bars = _require_bars(store, _asia_start(session_date), as_of, as_of,
+    # As in L1, the interval ends at the fixed 09:29 snapshot clock rather than
+    # at `as_of`: Sec 5 L3, "Daily bias, London context and range proxy remain
+    # frozen."  `as_of` stays the Sec 2 availability cutoff only.
+    bars = _require_bars(store, _asia_start(session_date),
+                         snapshot_at(session_date, SNAPSHOT_1), as_of,
                          "L4 overnight range [prev 18:00,09:29)")
     window = aggregate(bars)
     if not window.high > window.low:
