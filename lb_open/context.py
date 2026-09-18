@@ -27,6 +27,7 @@ from typing import Optional, Sequence
 from .calendar import REGULAR_CLOSE, REGULAR_OPEN, SNAPSHOT_1, is_eligible_session
 from .core import (
     BASELINE,
+    UTC,
     Bar,
     CostScenario,
     Direction,
@@ -89,8 +90,15 @@ def snapshot_at(session_date: date, t: time = SNAPSHOT_1) -> datetime:
 
 
 def _expected_minutes(start: datetime, end: datetime) -> int:
-    """Wall-clock elapsed minutes, so DST-shortened/lengthened days count right."""
-    return int((end - start).total_seconds() // 60)
+    """Minutes really elapsed over [start, end), not wall-clock minutes.
+
+    Two aware datetimes that share a tzinfo subtract naively in Python, which
+    would over/under-count an interval containing a DST transition and reject
+    complete data.  Converting to UTC first counts actual minute records.  No
+    interval used here spans a transition (they occur at 02:00 on a Sunday, and
+    session dates are weekdays), but the count must not depend on that.
+    """
+    return int((end.astimezone(UTC) - start.astimezone(UTC)).total_seconds() // 60)
 
 
 def _available_bars(
@@ -297,7 +305,10 @@ def classify_london(
     bullish = (ll < al and lh < ah and lc > al) or (lh > ah and lc > ah)
     bearish = (lh > ah and ll > al and lc < ah) or (ll < al and lc < al)
 
-    if bullish == bearish:  # Sec 5 L2: "Neither or both = no trade."
+    # Sec 5 L2: "Neither or both = no trade."  Every bullish arm contradicts
+    # every bearish arm (LC cannot be both > AH and < AL, and LH cannot be both
+    # < AH and > AH), so "both" is unreachable; the test stays literal anyway.
+    if bullish == bearish:
         return None
     return BULLISH if bullish else BEARISH
 
