@@ -655,7 +655,10 @@ def bootstrap_lower_bound(
     record |= {
         "n_blocks": n_blocks,
         "blocks_per_resample": blocks_per_resample,
-        "lower_bound": _r(lower, 6),
+        # Sec 7 compares this bound against zero, so it is stored at full
+        # precision; rounding belongs to presentation, not to the gate.
+        "lower_bound": float(lower),
+        "lower_bound_rounded": _r(lower, 6),
         "resample_mean_min": _r(float(means[0]), 6),
         "resample_mean_max": _r(float(means[-1]), 6),
         "resample_mean_mean": _r(float(means.mean()), 6),
@@ -840,7 +843,10 @@ def evaluate_gates(
     # --- Sec 7: registered span (informational hurdle) -------------------
     gates["registered_history_span"] = GateResult(
         "registered_history_span",
-        PASS if len(all_months) >= REGISTERED_SPAN_MONTHS else INCONCLUSIVE,
+        # Sec 2: "A continuous-chart run may be an exploratory screen only,
+        # labeled as such" - such a span is not the registered history either.
+        PASS if len(all_months) >= REGISTERED_SPAN_MONTHS and not exploratory
+        else INCONCLUSIVE,
         (
             f"{len(all_months)}/{REGISTERED_SPAN_MONTHS} calendar months of eligible "
             "sessions"
@@ -850,6 +856,7 @@ def evaluate_gates(
                 else " - Sec 7: report the actual shorter span; do not claim the "
                 "planned validation was performed"
             )
+            + (" - exploratory screen, not the registered history" if exploratory else "")
         ),
         {"calendar_months": len(all_months), "required": REGISTERED_SPAN_MONTHS,
          "development_sessions": len(dev), "validation_sessions": len(val),
@@ -883,7 +890,10 @@ def evaluate_gates(
         # No losing money in the sample: the ratio is unbounded, so the hurdle
         # is met only if there is winning money at all.
         pf_satisfied = sum(hold_nets) > 0
-        pf_text = "undefined (no losing holdout trades)"
+        pf_text = (
+            "undefined (no closed holdout trades)" if not hold_trades
+            else "undefined (no losing holdout trades)"
+        )
     else:
         pf_satisfied = hold_pf >= MIN_HOLDOUT_PROFIT_FACTOR
         pf_text = f"{hold_pf:.3f}"
@@ -927,9 +937,10 @@ def evaluate_gates(
         "bootstrap_lower_bounds",
         computable=boot_computable,
         satisfied=boot_ok,
+        # The gate compares the full-precision bounds; only the printed line rounds.
         detail=(
-            f"L=5 lower bound {bounds['L5']}, L=10 lower bound {bounds['L10']} "
-            "(both required > 0)"
+            f"L=5 lower bound {_r(bounds['L5'], 6)}, "
+            f"L=10 lower bound {_r(bounds['L10'], 6)} (both required > 0)"
         ),
         observed=boot_observed,
         evidence_adequate=adequate,

@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Literal, Optional, Sequence
 
-from .core import Bar, round_to_tick
+from .core import Bar
 from .data import MinuteStore
 
 ONE_MINUTE = timedelta(minutes=1)
@@ -65,12 +65,15 @@ def crosses(swing: Swing, bar: Bar) -> bool:
 
     Sec 5 L5: "strictly crossed its level"; "Strict penetration on the valid
     tick grid is the complete sweep threshold."  Sec 2: "Strict comparisons
-    mean strict" - touching the level exactly is not a cross.  Both sides are
-    snapped to the tick grid so strictness is judged on that grid (Sec 2).
+    mean strict" - touching the level exactly is not a cross.  Observed
+    extremes are compared as recorded: Sec 2 requires the feed's prices to
+    "conform to the instrument's tick grid", it does not license re-quantizing
+    an observation, and snapping here can only hide a real penetration.  This
+    is the same predicate the engine applies for the L5 sweep test.
     """
     if swing.is_high:
-        return round_to_tick(bar.high) > swing.level
-    return round_to_tick(bar.low) < swing.level
+        return bar.high > swing.level
+    return bar.low < swing.level
 
 
 def first_cross(
@@ -127,24 +130,24 @@ def find_swings(
         # Sec 5 L5: strictly higher/lower than BOTH neighbors; "Equal
         # highs/lows do not form a swing."  One outside candle can be both a
         # swing high and a swing low: the two tests are independent.
-        if round_to_tick(mid.high) > round_to_tick(prev.high) and round_to_tick(
-            mid.high
-        ) > round_to_tick(nxt.high):
+        # The level IS the recorded extreme of candle `j`; Sec 2 already requires
+        # it to lie on the tick grid, so it is carried through unaltered rather
+        # than re-quantized (a snap would move the frozen level away from the
+        # observation the engine's sweep and reaction tests compare against).
+        if mid.high > prev.high and mid.high > nxt.high:
             found.append(
                 Swing(
                     kind=HIGH,
-                    level=round_to_tick(mid.high),  # Sec 2: prices on the tick grid.
+                    level=mid.high,
                     mid_ts=mid.ts,
                     confirmed_at=confirmed_at,
                 )
             )
-        if round_to_tick(mid.low) < round_to_tick(prev.low) and round_to_tick(
-            mid.low
-        ) < round_to_tick(nxt.low):
+        if mid.low < prev.low and mid.low < nxt.low:
             found.append(
                 Swing(
                     kind=LOW,
-                    level=round_to_tick(mid.low),
+                    level=mid.low,
                     mid_ts=mid.ts,
                     confirmed_at=confirmed_at,
                 )
@@ -204,11 +207,11 @@ def nearest_swing_low_below(swings: Sequence[Swing], price: float) -> Optional[S
     Sec 5 L5: "Missing swing rejects this LB candidate" - the caller treats
     None as a rejection of that candidate, not as a day-level veto.
     """
-    p = round_to_tick(price)  # Sec 2: compare on the tick grid, strictly.
-    return _nearest([s for s in swings if s.is_low and s.level < p], prefer_higher=True)
+    # `price` is the frozen `E` (already on the tick grid, Sec 5 L3); it is
+    # compared as frozen so the strict test is the rulebook's own.
+    return _nearest([s for s in swings if s.is_low and s.level < price], prefer_higher=True)
 
 
 def nearest_swing_high_above(swings: Sequence[Swing], price: float) -> Optional[Swing]:
     """Sec 5 L5 Short: "nearest unconsumed confirmed swing high strictly above E"."""
-    p = round_to_tick(price)
-    return _nearest([s for s in swings if s.is_high and s.level > p], prefer_higher=False)
+    return _nearest([s for s in swings if s.is_high and s.level > price], prefer_higher=False)
